@@ -1,4 +1,5 @@
-main_folder='set your folder in'
+main_folder='/home/zlollo/CNR/Cebra_for_all'
+%main_folder='set your folder in'
 cd(main_folder)
 
 %path_to="F:\CNR neuroscience\Effettivo\Working On\Learning Latent Variable"
@@ -9,7 +10,6 @@ cd(main_folder)
 %pyenv('Version', '/home/zlollo/anaconda3/envs/cebra0/bin/python');
 %% UBUNTU (shell digitare 'which python')
 
-environment
 
 pyenv('Version', '/home/zlollo/anaconda3/envs/cebra/bin/python', ...
     'ExecutionMode', 'InProcess');
@@ -74,11 +74,19 @@ data = jl.load(filePath);
 neuralData = data{'spikes'};
 
 behaviorData = data{'position'};
+
 %%% imposto le dimensioni corrette
 neuralDataMat = double(py.array.array('d', py.numpy.nditer(neuralData)));
 behaviorDataMat = double(py.array.array('d', py.numpy.nditer(behaviorData)));
 neuralDataMat = reshape(neuralDataMat, [120, 10178]).';
 behaviorDataMat = reshape(behaviorDataMat, [3, 10178]).';
+
+
+% N.B.!! I dati neurali sono spike di 120 neuroni "binnati"
+% in finestre di 25ms (10178)...I dati di behavior, sono la posizione
+% lungo un percorso rettilineo (valore continuo) e due vettori 0 1 
+% che si alternano e ci dicono la direzione
+
 
 %%% check dimensions
 [dataRows, dataCols] = size(behaviorDataMat);
@@ -107,18 +115,129 @@ xticklabels(linspace(0, 0.025 * 5000, 5));
 drawnow;
 
 %%% create now csv files to store data for python
-csvwrite('neuralData.csv', neuralDataMat);
-csvwrite('behaviorData.csv', behaviorDataMat);
+%%csvwrite('neuralData.csv', neuralDataMat);
+%%%csvwrite('behaviorData.csv', behaviorDataMat);
 %%% o anche
 save('data.mat', 'neuralDataMat', 'behaviorDataMat');
 load('data.mat')
 
+%%% Facciamo girare codice python 
+%%% si generano degli output che poi carico qui
+
+%% settiamo i parametri (questi possono cambiare secondo indicazioni 
+% a seguir e a piacimento)
+
+params = struct('mod_arch', 'offset10-model', 'output_dimension', 3 ,...
+'temperature', 1, 'max_iter', 100, 'distance', 'cosine', 'conditional',...
+    'time_delta','time_offsets',10);
+save('params.mat', 'params');
+
+%% Facciamo girare tutto in python e poi carichiamo output (codice a seguire)
+system('python hip_models.py');
+
+%%% Una nota sui modelli che si fanno girare: 
+%Questi offrono diversi parametri...tipo
+% 1) ARCHITETTURA DELLA RETE (default: offset1-model)
+% 2) TEMPERATURE: Fattore per cui scalare la similarità: 
+%   parametro che scala la somiglianza tra le coppie positive e negative.
+%   Regolando questo parametro, è possibile influenzare quanto fortemente 
+%   il modello dovrebbe considerare le coppie come simili o dissimili. 
+%   Valori più alti di questo fattore di scala portano alla creazione di
+%   embedding più "affilati" e concentrati. In altre parole, aumentando 
+%   il valore di questo parametro, gli embedding risultanti saranno più
+%   distinti l'uno dall'altro per le coppie negative e più simili tra 
+%   loro per le coppie positive. Di fatto,  questo aiuta a migliorare la 
+%   capacità del modello di distinguere tra diversi tipi di dati
+% 3) OUTPUT DEMENSION: la dimensione dello spaio di arrivo (embedding)
+% 4) MAX ITERATIONS: va da sè
+% 5) CONDITIONAL La distribuzione condizionata da utilizzare per campionare 
+%   i campioni positivi cioè simili al campione di riferimento. I campioni 
+%   di riferimento e  quelli negativi vengono estratti da una prior uniforme. 
+%   In particolare, sono supoortate 3 tipi di distribuzione
+%   -time: I campioni positivi sono scelti in base al loro momento temporale,
+%   con un offset temporale fisso rispetto ai campioni di riferimento.
+%   Questo significa che i campioni positivi sono quelli che si verificano 
+%   in un momento specifico prima o dopo il campione di riferimento
+%   -time delta: Questo approccio considera come il comportamento 
+%   (o le caratteristiche dei dati) cambia nel tempo. 
+%   I campioni positivi sono scelti considerando la distribuzione empirica
+%   del comportamento o delle caratteristiche all'interno di un intervallo
+%   di tempo definito (time_offset).
+%   -delta: Qui, i campioni positivi sono scelti in base a una distribuzione
+%   gaussiana centrata intorno al campione di riferimento, 
+%   con una deviazione standard (delta) fissa. Ciò significa che i 
+%   campioni positivi saranno quelli che sono "vicini" al campione di
+%   riferimento secondo una misura quantitativa definita dal delta.
+%   Campioni di riferimento e negativi: Sia i campioni di riferimento 
+%   che quelli negativi (dissimili dal campione di riferimento) vengono 
+%   scelti da una distribuzione uniforme, il che significa che vengono 
+%   selezionati casualmente dall'intero set di dati senza una preferenza 
+%   specifica.
+% 6) DEVICE: 
+% 7) VERBOSE: Fa vedere come evolve il training 
+% 8) TIME_OFFSET:  li "offsets" sono valori che determinano come i
+%   campioni vengono selezionati rispetto a un punto di riferimento nel
+%   tempo. Questi valori sono cruciali per costruire la distribuzione 
+%   empirica, ovvero una rappresentazione basata sui dati effettivi di 
+%   come variano le caratteristiche dei campioni nel tempo. L'offset può
+%   essere un singolo valore fisso, che significa che tutti i campioni 
+%   positivi saranno selezionati con lo stesso intervallo di tempo dal
+%   campione di riferimento. Alternativamente, può essere una tupla di
+%   valori, da cui il modello campiona uniformemente. Questo permette una
+%   maggiore varietà e casualità nella selezione dei campioni positivi, 
+%   riflettendo diverse possibili distanze temporali rispetto al campione
+%   di riferimento. Time offset ha effetto solo se conditional è
+%   settata su "time" o "time_delta"
+% 9) HYBRID: se Settata su True, il modello verrà allenato usando funzioni 
+%    di perdita che distinguono tra campioni in momenti diversi
+%   (time contrastive) e tra campioni che presentano diversi comportamennti
+%   o stati. (behavio contrative)
+% 10)DISTANCE: funzione di distanza usata nel training per definire i
+%    campioni positivi e negativi rispetto ai campioni di riferimento
+%    Può essere cosine ed euclidean
+    
+%%%
+
+
+
+
+
 %%%% faccio girare i primi modelli cebra in Python 
-% Cebra- behaviour  addestrea un modello con output 3d che usa info 
-% posiionali (posiz e direz)con l'uso di una variabili ausiliaria, 
-% time_delta, il tempo durante il trainingdel modello Il modello 
-% Cebra-shuffled, viene usato come coontrollo Il modello Cebra-time 
-% utilizza solo info  temporali  e non comportamentali (posizionali)
+
+
+% % Cebra è primariamente usato per inferire estrazioni di fattori latenti
+% da serie temporali. Supporta 3 modelli (cfr più sotto)
+% % e si basa su un algoritmo di leanring self sueprvised che usa il
+% il contrastive learning. Di fatto è una tecnica di riduzione della 
+% dimensionalità come tSNE UMAP (con migliori risultati secondo il paper) 
+% Può anche essere usato su dati non time series. In generale, CEBRA può 
+% CEBRA è raccomandato per valutare le variazioni nella consistenza dei
+% dati neuroscientifici attraverso diverse condizioni, come aree cerebrali,
+% cellule, o animali. Questo significa che può aiutare a identificare come
+% variano i modelli di attività cerebrale in situazioni diverse.
+% Il metodo può essere utilizzato per interpretare o "decodificare" i 
+% segnali neurali in modo che sia guidato da ipotesi specifiche. 
+% Ciò implica [l'utilizzo di CEBRA per testare teorie' ... 
+% specifiche su come il cervello elabora le informazioni.]
+% 
+% CEBRA può aiutare [nell'esplorazione della struttura e delle relazioni ' ...
+% [all']interno degli spazi di embedding, e oltre all'esplorazione, CEBRA è' ...
+%  utile anche per visualizzare questi spazi e considerare come cambiano 
+% nel tempo o in risposta a stimoli diversi.
+% CEBRA è stato utilizzato, per applicazioni pratiche tra cui la mappatura
+% dello spazio, la decodifica di film naturali e la formulazione di ipotesi
+% sulla codifica neurale nei sistemi sensorimotori. Questi esempi sono 
+% tratti da un articolo di Schneider, Lee e Mathis del 2023.
+
+
+
+%%% I tre modelli di cui sopra...
+% 1) Cebra- behaviour (supervised)  addestra un modello con output 3d che 
+% usa info   posiionali (posiz e direz) con l'uso di una variabili ausiliaria, 
+% time_delta, il tempo durante il training del modello Il modello 
+% - Cebra-shuffled, viene usato come controllo 
+% 2)Il modello Cebra-time  (fully unsupervised) utilizza solo info  
+% temporali  e non  comportamentali (posizionali)
 % Cebra hybrid infine utilizza una combinazione di informazioni temporali e
 %  comportamentali in modo più integrato e bilanciato.
 % Invece di trattare le informazioni temporali come un semplice contesto 
@@ -140,11 +259,7 @@ behavior_data=behaviorDataMat
 
 
 
-
-
 %%% viisualizziamo gli spazi embedded generati con Cebra
-
-
 
 % Crea le figure
 figure;
@@ -243,6 +358,8 @@ loss_pos_shuffle = models_loss.loss_pos_shuffle;
 loss_dir_shuffle =models_loss.loss_dir_shuffle;
 
 % Plot delle perdite dei modelli
+fig = figure;
+ax = axes(fig);
 plot(ax, loss_pos_dir, 'Color', '#00BFFF', 'DisplayName', 'position+direction'); % deepskyblue
 hold(ax, 'on'); % Mantiene il grafico corrente per sovrapporre le altre linee
 plot(ax, loss_pos, 'Color', [0 191/255 1 0.3], 'DisplayName', 'position'); % Colore più chiaro

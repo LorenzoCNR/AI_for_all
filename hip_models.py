@@ -39,6 +39,26 @@ import torch
 
 ### i dati direzione posizione sono 
 data_mat = scipy.io.loadmat('data.mat')
+data_param= scipy.io.loadmat('params.mat')
+
+params = data_param['params']
+
+mod_arch= params['mod_arch'][0].item() 
+mod_arch= mod_arch[0]
+
+out_dim= int(params['output_dimension'][0][0])
+
+temp=int(params['temperature'][0][0])
+
+max_iter=int(params['max_iter'][0][0])
+
+dist= params['distance'][0].item() 
+dist= dist[0]
+
+cond= params['conditional'][0].item() 
+cond= cond[0]
+
+time_off=int(params['time_offsets'][0][0])
 
 
 neural_data = data_mat['neuralDataMat']
@@ -83,21 +103,21 @@ che tiene conto sia del comportamento che del tempo in maniera paritaria.
 
 
 
-max_iterations = 10 ## defaut 5000
+#max_iterations = 10 ## defaut 5000
 output_dimension = 32 #here, we set as a variable for hypothesis testing below.
 
 
-cebra_posdir3_model = CEBRA(model_architecture='offset10-model',
+cebra_posdir3_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1, 
-                        output_dimension=3,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        temperature=temp, 
+                        output_dimension=out_dim,
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
 cebra_posdir3_model.fit(neural_data,behavior_data[:,0])
 cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
@@ -105,17 +125,17 @@ cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
 
 ### Qui si allena in modello con shuffled neural datao
 
-cebra_posdir_shuffled3_model = CEBRA(model_architecture='offset10-model',
+cebra_posdir_shuffled3_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=3,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
 hippocampus_shuffled_posdir = np.random.permutation(behavior_data)
 cebra_posdir_shuffled3_model.fit(neural_data, hippocampus_shuffled_posdir)
@@ -123,34 +143,35 @@ cebra_posdir_shuffled3 = cebra_posdir_shuffled3_model.transform(neural_data)
 
 #### modello con time ma senza info comportamentalii
 ### setto conditional su time
-###
-cebra_time3_model = CEBRA(model_architecture='offset10-model',
+### OKKIO CHE QUI TEMPERATURE è tipo 1.12 (12% maggiore)
+### ...okkio che condtionale è time, non time delta
+cebra_time3_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
                         temperature=1.12,
                         output_dimension=3,
-                        max_iterations=max_iterations,
-                        distance='cosine',
+                        max_iterations=max_iter,
+                        distance=dist,
                         conditional='time',
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
 cebra_time3_model.fit(behavior_data)
 cebra_time3 = cebra_time3_model.transform(behavior_data)
 
 ### modello ibrido con info temporali e posizionali 
-cebra_hybrid_model = CEBRA(model_architecture='offset10-model',
+cebra_hybrid_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=4,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10,
+                        time_offsets=time_off,
                         hybrid = True)
 
 cebra_hybrid_model.fit(neural_data, behavior_data)
@@ -210,37 +231,37 @@ label_train = behavior_data[:split_idx]
 label_test = behavior_data[split_idx:]
     
 
-cebra_posdir_model = CEBRA(model_architecture='offset10-model',
+cebra_posdir_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
-cebra_pos_model = CEBRA(model_architecture='offset10-model',
+cebra_pos_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
-cebra_dir_model = CEBRA(model_architecture='offset10-model',
+cebra_dir_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
+                        max_iterations=max_iter,
+                        distance=dist,
                         device='cuda_if_available',
                         verbose=True)
 
@@ -266,37 +287,37 @@ cebra_dir_test = cebra_dir_model.transform(neural_test)
 
 ##àà Alleniamo modelli di controllo con shuffled behaviour variables
 
-cebra_posdir_shuffled_model = CEBRA(model_architecture='offset10-model',
+cebra_posdir_shuffled_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
-cebra_pos_shuffled_model = CEBRA(model_architecture='offset10-model',
+cebra_pos_shuffled_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
-                        conditional='time_delta',
+                        max_iterations=max_iter,
+                        distance=dist,
+                        conditional=cond,
                         device='cuda_if_available',
                         verbose=True,
-                        time_offsets=10)
+                        time_offsets=time_off)
 
-cebra_dir_shuffled_model = CEBRA(model_architecture='offset10-model',
+cebra_dir_shuffled_model = CEBRA(model_architecture=mod_arch,
                         batch_size=512,
                         learning_rate=3e-4,
-                        temperature=1,
+                        temperature=temp,
                         output_dimension=output_dimension,
-                        max_iterations=max_iterations,
-                        distance='cosine',
+                        max_iterations=max_iter,
+                        distance=dist,
                         device='cuda_if_available',
                         verbose=True)
 
@@ -373,27 +394,20 @@ models_loss = {
 
 savemat('model_loss.mat', models_loss)
 
-fig = plt.figure(figsize=(5,5))
-ax = plt.subplot(111)
-ax.plot(cebra_posdir_model.state_dict_['loss'], c='deepskyblue', label = 'position+direction')
-ax.plot(cebra_pos_model.state_dict_['loss'], c='deepskyblue', alpha = 0.3, label = 'position')
-ax.plot(cebra_dir_model.state_dict_['loss'], c='deepskyblue', alpha=0.6,label = 'direction')
-ax.plot(cebra_posdir_shuffled_model.state_dict_['loss'], c='gray', label = 'pos+dir, shuffled')
-ax.plot(cebra_pos_shuffled_model.state_dict_['loss'], c='gray', alpha = 0.3, label = 'position, shuffled')
-ax.plot(cebra_dir_shuffled_model.state_dict_['loss'],c='gray', alpha=0.6,label = 'direction, shuffled')
+# fig = plt.figure(figsize=(5,5))
+# ax = plt.subplot(111)
+# ax.plot(cebra_posdir_model.state_dict_['loss'], c='deepskyblue', label = 'position+direction')
+# ax.plot(cebra_pos_model.state_dict_['loss'], c='deepskyblue', alpha = 0.3, label = 'position')
+# ax.plot(cebra_dir_model.state_dict_['loss'], c='deepskyblue', alpha=0.6,label = 'direction')
+# ax.plot(cebra_posdir_shuffled_model.state_dict_['loss'], c='gray', label = 'pos+dir, shuffled')
+# ax.plot(cebra_pos_shuffled_model.state_dict_['loss'], c='gray', alpha = 0.3, label = 'position, shuffled')
+# ax.plot(cebra_dir_shuffled_model.state_dict_['loss'],c='gray', alpha=0.6,label = 'direction, shuffled')
 
-
-
-
-
-
-
-
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-ax.set_xlabel('Iterations')
-ax.set_ylabel('InfoNCE Loss')
-plt.legend(bbox_to_anchor=(0.5,0.3), frameon = False )
-plt.show()
+# ax.spines['top'].set_visible(False)
+# ax.spines['right'].set_visible(False)
+# ax.set_xlabel('Iterations')
+# ax.set_ylabel('InfoNCE Loss')
+# plt.legend(bbox_to_anchor=(0.5,0.3), frameon = False )
+# plt.show()
 
 #### ddecoding...fare update.....
