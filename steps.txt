@@ -1,8 +1,4 @@
 
-
-
-
-
 1) Installare Anaconda (Ricordarsi di aggiornare le variabili di ambiente...path...)
 
 2) da shell, creare un environment per CEBRA (non è necessario specificare la versione di python ma  se si preferisce, aggiungere alla seguente riga di comando la stringa python=3....la versione che si vuole o meglio compatibile con il proprio matlab;  cfr https://www.mathworks.com/support/requirements/python-compatibility.html) . Quella che parla meglio con pytorch dovrebbe eseere la  3.8 ma vanno bene anche le successive
@@ -15,10 +11,10 @@
 	conda install pytorch cpuonly -c pytorch
 	(N.B.se si dispone di gpu si può anche installare pytorch per gpu $ conda install pytorch 
 	cudatoolkit=.... -c pytorch...con la versione di cuda di cui si dispone)
-	se ci sono problemi con prcdenti versioni di tensorflow...pip uninstall tf-nightly)
+	se ci sono problemi con precdenti versioni di tensorflow...pip uninstall tf-nightly)
 	pip install cebra
 	pip install --pre 'cebra[dev,demos]'
-	#conda install numpy pandas matplotlib joblib  scikit-learn h5py scikit-learn-intelex 
+	#conda install numpy pandas matplotlib joblib  scikit-learn h5py #scikit-learn-intelex 
 	#conda install numpy
 	conda install pandas
 	#conda install matplotlib
@@ -27,7 +23,7 @@
 	conda install h5py
 	#conda install scikit-learn-intelex
 
-#### ptorebbe dare warning circa le dipendenze da questi due pacchetti
+#### potrebbe dare warning circa le dipendenze da questi due pacchetti
 	%% pip install oauthlib>=3.0.0
 	%% pip install protobuf>=3.19.6
 
@@ -40,6 +36,8 @@ aggiungere la riga di comando con il percorso corretto dell'interprete Python ne
 
 far girare lo script matlab...ci potrebbero essere dei conflitti con le librerie c++
 
+5) Lo script in python genera output che grafichiamo in matlab...a seguire 
+ nello script matlab precedente
 
 #####################################################################################	
 5) Passaggi %%% NECESSARI PER risolvere eventuali conflitti tra  le librerie c++ di matlab e quelle di Python; se matlab usa le sue librerie c++ ci sono possibili conflitti   con quelle richieste da alcuni pacchetti python tipo pandas
