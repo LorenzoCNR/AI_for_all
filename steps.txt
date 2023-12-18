@@ -34,7 +34,7 @@ aggiungere la riga di comando con il percorso corretto dell'interprete Python ne
 	
 	pyenv('Version', 'C:\path\to\conda\envs\cebra\python.exe', 'ExecutionMode', 'OutOfProcess');
 
-far girare lo script matlab...(ci potrebbero essere dei conflitti con le librerie c++ cfr sotto in caso)
+far girare lo script matlab...(ci potrebbero essere dei conflitti con le librerie c++; cfr sotto in caso)
 Questo script carica i dati di Mirco li trasforma in formato "digeribile" da CEBRA e li salva in un  mat da caricare su python (in automatico)
 Allo stesso modo, si salva una struttura contenente dei parametri generici ....tipo la folder su cui vogliamo lavorare e indirizzare gli output, il tipo di modello, se supervised (default) o unsupervised
 e i parametri propriamente del modello che possono essere modificati a piacimento (cfr link per capire)

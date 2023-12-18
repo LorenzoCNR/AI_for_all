@@ -12,11 +12,11 @@ This is a temporary script file.
 #!pip uninstall -y ripser
 
 import os
-os.getcwd()
+#os.getcwd()
 ################################## CAMBIARE ########################################
-main_folder=r'/home/zlollo/CNR/git_out_cebra/elab_Mirco'
+#main_folder=r'/home/zlollo/CNR/git_out_cebra/elab_Mirco'
 
-os.chdir(main_folder)
+#os.chdir(main_folder)
 import sys
 
 #sys.path.append('/path/to/your/directory')
@@ -50,6 +50,13 @@ import torch
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 import sklearn.metrics
 
+# Check for the correct number of arguments
+if len(sys.argv) != 3:
+    print("Usage: python script.py <input_directory> <output_directory>")
+    sys.exit(1)
+
+input_directory = sys.argv[1]
+output_directory = sys.argv[2]
 
 
 ##################### PArametri Generici ###########################àssss
@@ -186,14 +193,11 @@ except FileNotFoundError:
 
 ### dati Mirco
 #dati_M_path='/home/zlollo/CNR/git_out_cebra/elab_Mirco/data_norm_long.mat'
-data_mat = scipy.io.loadmat('data_norm_long.mat')
-data_norm_long=data_mat['data_norm_long'].astype('float32')
+data_mat = scipy.io.loadmat(os.path.join(input_directory, 'data_norm_long.mat'))
+data_norm_long = data_mat['data_norm_long'].astype('float32')
 
-#print(data_mat.keys())
-
-data_=data_norm_long[:,0:-1].astype('float32')
-label_=data_norm_long[:,-1].astype('float32')
-
+data_ = data_norm_long[:, 0:-1].astype('float32')
+label_ = data_norm_long[:, -1].astype('float32')
 
 # Verifica se PyTorch è stato compilato con il supporto GPU
 if torch.cuda.is_available():
@@ -309,7 +313,7 @@ def run_model(model, data, labels, model_type):
 cebra_output = run_model(cebra_target_model, data_, label_, mod_type)
 
 cebra_mat={'cebra_output':cebra_output}
-savemat('cebra_output.mat', cebra_mat)
+scipy.io.savemat(os.path.join(output_directory, 'cebra_output.mat'), cebra_mat)
 
   
 #### codice per gestire memoria

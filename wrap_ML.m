@@ -10,6 +10,11 @@ pyenv('Version', '/home/zlollo/anaconda3/envs/cebra/bin/python', ...
 
 main_folder="/home/zlollo/CNR/git_out_cebra/elab_Mirco";
 cd(main_folder)
+input_directory = "/home/zlollo/CNR/git_out_cebra/elab_Mirco"; 
+output_directory = "/home/zlollo/CNR/Cebra_for_all"; 
+
+
+
 %save('path_to_save.mat', 'main_folder', '-v7');
 
 
@@ -100,10 +105,13 @@ save('params.mat', 'params');
 
 
 
+
 %% Facciamo girare tutto in python e poi carichiamo output (codice a seguire)
-system('python wrap_py.py');
+script_path = '/home/zlollo/CNR/git_out_cebra/elab_Mirco/wrap_py.py';  
+command = sprintf('python "%s" "%s" "%s"', script_path, input_directory, output_directory);
+system(command);
 
 
 %%% Carico output Cebra per elaborazioni
-load("cebra_output.mat")
+%load("cebra_output.mat")
 
