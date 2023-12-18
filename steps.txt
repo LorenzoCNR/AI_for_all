@@ -9,14 +9,14 @@
 
 	conda activate cebra
 	conda install pytorch cpuonly -c pytorch
-	(N.B.se si dispone di gpu si può anche installare pytorch per gpu $ conda install pytorch 
-	cudatoolkit=.... -c pytorch...con la versione di cuda di cui si dispone)
+	(N.B.se si disponE di gpu si può anche installare pytorch per gpu $ conda install pytorch Torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia )
 	se ci sono problemi con precdenti versioni di tensorflow...pip uninstall tf-nightly)
 	pip install cebra
 	pip install --pre 'cebra[dev,demos]'
 	#conda install numpy pandas matplotlib joblib  scikit-learn h5py #scikit-learn-intelex 
 	#conda install numpy
 	conda install pandas
+	conda install -c anaconda scipy
 	#conda install matplotlib
 	#conda install joblib
 	#conda install scikit-learn
@@ -29,15 +29,21 @@
 
 	
 
-4) Far partire Matlab (dall'environment creato)
+4) Far partire Matlab (wrap_ML) (dall'environment creato)
 aggiungere la riga di comando con il percorso corretto dell'interprete Python nell'ambiente cebra (digitare 'which python' per  saperlo o  'where python' in windows)
 	
 	pyenv('Version', 'C:\path\to\conda\envs\cebra\python.exe', 'ExecutionMode', 'OutOfProcess');
 
-far girare lo script matlab...ci potrebbero essere dei conflitti con le librerie c++
+far girare lo script matlab...(ci potrebbero essere dei conflitti con le librerie c++ cfr sotto in caso)
+Questo script carica i dati di Mirco li trasforma in formato "digeribile" da CEBRA e li salva in un  mat da caricare su python (in automatico)
+Allo stesso modo, si salva una struttura contenente dei parametri generici ....tipo la folder su cui vogliamo lavorare e indirizzare gli output, il tipo di modello, se supervised (default) o unsupervised
+e i parametri propriamente del modello che possono essere modificati a piacimento (cfr link per capire)
+% https://cebra.ai/docs/api/pytorch/models.html#cebra.models.get_options
+% https://cebra.ai/docs/api/sklearn/cebra.html#cebra.CEBRA.temperature_mode
 
-5) Lo script in python genera output che grafichiamo in matlab...a seguire 
- nello script matlab precedente
+
+5) Lo script in python (wrap_py) (che deve essere nella cartella dove abbiamo salvato i mat di cui sopra) genera output per elaborazioni in matlab...li salva quindi in formato MaT. 
+Viene fatto girare direttamente da MatLab
 
 #####################################################################################	
 5) Passaggi %%% NECESSARI PER risolvere eventuali conflitti tra  le librerie c++ di matlab e quelle di Python; se matlab usa le sue librerie c++ ci sono possibili conflitti   con quelle richieste da alcuni pacchetti python tipo pandas

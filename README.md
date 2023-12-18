@@ -22,6 +22,8 @@ N.B.! Nel main si lanciano gli altri due script che generano output e figure.
       dd, err_loss, mod_pred= main()
 
 
+19.12.2023: Carico file wrap_ML e wrap_py per output per elaborazioni direttamente da MatLab
+
 
 
 
