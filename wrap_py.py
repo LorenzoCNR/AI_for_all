@@ -50,7 +50,7 @@ import torch
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 import sklearn.metrics
 
-# Check for the correct number of arguments
+# Check # argomenti corretto
 if len(sys.argv) != 3:
     print("Usage: python script.py <input_directory> <output_directory>")
     sys.exit(1)
@@ -312,6 +312,7 @@ def run_model(model, data, labels, model_type):
  
 cebra_output = run_model(cebra_target_model, data_, label_, mod_type)
 
+### generiamo e salviamo output nella directory ordianta d amatlab
 cebra_mat={'cebra_output':cebra_output}
 scipy.io.savemat(os.path.join(output_directory, 'cebra_output.mat'), cebra_mat)
 
