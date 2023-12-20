@@ -279,7 +279,7 @@ torch.cuda.empty_cache()
 
 cebra_target_model = CEBRA(model_architecture=mod_arch,
                            distance=dist,
-                           conditional='time_delta',
+                           conditional=cond,
                            temperature=temp,
                            time_offsets=time_off,
                            max_iterations=max_iter,
@@ -290,7 +290,7 @@ cebra_target_model = CEBRA(model_architecture=mod_arch,
                            verbose=verb,
                            num_hidden_units=n_h_u,
                            pad_before_transform=p_b_t,
-                           hybrid=True,
+                           hybrid=hyb,
                            device='cuda_if_available')
 
 

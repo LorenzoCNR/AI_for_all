@@ -1,17 +1,16 @@
+% function cebra_wrap(params)
+% function cebra_wrap(params)
 
-% Imposto ambiente python per farlo girare da MatLab
-% UBUNTU (shell digitare 'which python'...percorso python in conda ed ambiente relativo)
-pyenv('Version', '/home/zlollo/anaconda3/envs/cebra/bin/python', ...
-    'ExecutionMode', 'InProcess');
-    
 
-%%% Aggiungere le path di interesse dove in particolare scarico  i dati
-% (ricordarsi di farlo anche nel file python wrap_py.py
+% main_folder="/home/zlollo/CNR/git_out_cebra/elab_Mirco";
+% main_folder="~/TESTS/DAUSILIO/CEBRA/";
 
-main_folder="/home/zlollo/CNR/git_out_cebra/elab_Mirco";
-cd(main_folder)
-input_directory = "/home/zlollo/CNR/git_out_cebra/elab_Mirco"; 
-output_directory = "/home/zlollo/CNR/Cebra_for_all"; 
+% cd(main_folder)
+% input_directory = "/home/zlollo/CNR/git_out_cebra/elab_Mirco"; 
+% output_directory = "/home/zlollo/CNR/Cebra_for_all"; 
+
+input_directory     = '~/DATA/DAUSILIO/CEBRA/'; 
+output_directory    = '~/TESTS/DAUSILIO/CEBRA/'; 
 
 
 
@@ -24,21 +23,24 @@ output_directory = "/home/zlollo/CNR/Cebra_for_all";
 % trial; le label corrispondenti (in forma numerica)
 % labels: valori categorici (o qualitativi) assunti dalle labels. 
 
-data_norm_=load("data_Baseline_NormSingle.mat");
-data_norm=data_norm_.dataFITTS
-
+nf = '~/DATA/DAUSILIO/Churchland_format/data_Baseline_NormSingle.mat';
+fprintf('Loading data in %s...',nf); t=tic;
+data_norm_=load(nf);
+data_norm=data_norm_.dataFITTS;
+fprintf('Elapsed Time %g s\n',toc(t));
 
 %%% Estraggo i dati e li metto in un formato idoneo per CEBRA
 % ottengo un mat che poi carico in python per le elaborazioni
 data=data_norm.trials;
-fields = fieldnames(data);
-labels=cell2mat({data(1:end).trialType})
+% fields = fieldnames(data);
+labels=cell2mat({data(1:end).trialType});
 
-numElectrodes = size(data(1).EEG,1);
-numTimePoints = size(data(2).EEG,2);
-numMatrices = size(data,2) % Numero totale di matrici
+% numElectrodes = size(data(1).EEG,1);
+% numTimePoints = size(data(2).EEG,2);
+numMatrices = size(data,2); % Numero totale di matrici
 data_norm_long = []; % Inizializza una matrice vuota
 
+fprintf('Prepare data and save in...');t=tic;
 
 %%% faccio Re-Shape e unisco tutte le matrici (359 nello specifico)
 for i = 1:numMatrices
@@ -55,9 +57,12 @@ for i = 1:numMatrices
     data_norm_long= [data_norm_long; [currentMatrix,matrixID]];
 end
 
-save("data_norm_long.mat")
 
-%%%% Parametri per il modello 
+
+save([input_directory 'data_norm_long.mat'],'data_norm_long');
+fprintf('Elapsed Time %g s\n',toc(t));
+
+%%%% Model parameters
 % model type supervised/unsupervised a seconda che voglia o meno
 %%% CFR i link sotto per la definizione dei parametri
 % https://cebra.ai/docs/api/pytorch/models.html#cebra.models.get_options
@@ -87,29 +92,22 @@ save("data_norm_long.mat")
 
 
 
-%%%$ N.B.!!! 
+%% N.B.!!! 
 % modello Unsupervised (discovery-time) vuole param conditonal='time'
 % modello supervised (behaviour) conditonal come vogliamo
 % hybrid = True (supervised) conditional ='time_delta' 
 % questione batch size...se ci sono problemi di memoria, diminuire 
 % batch size (256 vengono gestiti da una gpu con 12gb nel caso di 
 %% modello più complesso, supervised+hybrid)
-%% 
-params = struct('model_type','supervised','mod_arch', 'offset10-model', ...
-    'distance', 'cosine', 'conditional', 'time_delta', 'temperature', 1, 'time_offsets', 10, ...
-    'max_iter', 1000, 'max_adapt_iter', 500, 'batch_size', 256, 'learning_rate', 3e-4, ...
-    'output_dimension', 3, 'verbose', 'True', 'num_hidden_units', 32, ...
-    'pad_before_transform', 'True', 'hybrid', 'false');
+fprintf('Perform CEBRA fit...'); t=tic;
+params=CEBRA_defaultParams();
+save('params.minputat', 'params');
 
-save('params.mat', 'params');
-
-
-
-
-%% F     acciamo girare tutto in python e poi carichiamo output (codice a seguire)
-script_path = '/home/zlollo/CNR/git_out_cebra/elab_Mirco/wrap_py.py';  
+%% Facciamo girare tutto in python e poi carichiamo output (codice a seguire)
+script_path = [cebra_dir 'wrap_py.py'];  
 command = sprintf('python "%s" "%s" "%s"', script_path, input_directory, output_directory);
 system(command);
+fprintf('Elapsed Time %g s\n',toc(t));
 
 
 %%% Carico output Cebra per elaborazioni
