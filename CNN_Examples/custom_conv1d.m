@@ -16,9 +16,9 @@ function next_layer = custom_conv1d(input, kernel, bias, stride, padding, activa
 
     % Actually the input is a (or a group of M) time series T*1 (T*M)
     % with T>>M ...so Transpose if rows << columns
-    if size(input, 1) < size(input, 2)
-        input = input';
-    end
+    % if size(input, 1) < size(input, 2)
+        % input = input';
+    % end
 
 
     % Get input and kernel dimensions

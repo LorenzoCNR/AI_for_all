@@ -1,18 +1,15 @@
 % function cebra_wrap(params)
-% function cebra_wrap(params)
+% function cebra_wrap(cebrapms,py_in,py_out)
 
 
-% main_folder="/home/zlollo/CNR/git_out_cebra/elab_Mirco";
-% main_folder="~/TESTS/DAUSILIO/CEBRA/";
-
-% cd(main_folder)
-% input_directory = "/home/zlollo/CNR/git_out_cebra/elab_Mirco"; 
-% output_directory = "/home/zlollo/CNR/Cebra_for_all"; 
-
-input_directory     = '~/DATA/DAUSILIO/CEBRA/'; 
-output_directory    = '~/TESTS/DAUSILIO/CEBRA/'; 
-
-
+input_directory     = '/home/donnarumma/DATA/DAUSILIO/CEBR4/'; 
+output_directory    = '/home/donnarumma/TESTS/DAUSILIO/CEBR4/'; 
+if ~isfolder(input_directory)
+    mkdir(input_directory)
+end
+if ~isfolder(output_directory)
+    mkdir(output_directory)
+end
 
 %save('path_to_save.mat', 'main_folder', '-v7');
 
@@ -26,7 +23,7 @@ output_directory    = '~/TESTS/DAUSILIO/CEBRA/';
 nf = '~/DATA/DAUSILIO/Churchland_format/data_Baseline_NormSingle.mat';
 fprintf('Loading data in %s...',nf); t=tic;
 data_norm_=load(nf);
-data_norm=data_norm_.dataFITTS;
+data_norm =data_norm_.dataFITTS;
 fprintf('Elapsed Time %g s\n',toc(t));
 
 %%% Estraggo i dati e li metto in un formato idoneo per CEBRA
@@ -40,7 +37,8 @@ labels=cell2mat({data(1:end).trialType});
 numMatrices = size(data,2); % Numero totale di matrici
 data_norm_long = []; % Inizializza una matrice vuota
 
-fprintf('Prepare data and save in...');t=tic;
+sf = [input_directory 'data_norm_long.mat'];
+fprintf('Prepare data and save in %s...',sf);t=tic;
 
 %%% faccio Re-Shape e unisco tutte le matrici (359 nello specifico)
 for i = 1:numMatrices
@@ -59,7 +57,7 @@ end
 
 
 
-save([input_directory 'data_norm_long.mat'],'data_norm_long');
+save(sf,'data_norm_long');
 fprintf('Elapsed Time %g s\n',toc(t));
 
 %%%% Model parameters
@@ -99,13 +97,14 @@ fprintf('Elapsed Time %g s\n',toc(t));
 % questione batch size...se ci sono problemi di memoria, diminuire 
 % batch size (256 vengono gestiti da una gpu con 12gb nel caso di 
 %% modello più complesso, supervised+hybrid)
-fprintf('Perform CEBRA fit...'); t=tic;
+
+script_path = [cebra_dir 'wrap_py.py'];  
+command = sprintf('python "%s" "%s" "%s"', script_path, input_directory, output_directory);
+fprintf('Perform CEBRA fit (executing %s)...',command); t=tic;
 params=CEBRA_defaultParams();
 save('params.minputat', 'params');
 
 %% Facciamo girare tutto in python e poi carichiamo output (codice a seguire)
-script_path = [cebra_dir 'wrap_py.py'];  
-command = sprintf('python "%s" "%s" "%s"', script_path, input_directory, output_directory);
 system(command);
 fprintf('Elapsed Time %g s\n',toc(t));
 
