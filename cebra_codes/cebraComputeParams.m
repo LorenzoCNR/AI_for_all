@@ -32,7 +32,7 @@ params.exec             = true;
 params.script_name      ='wrap_py_rat_mod.py';
 params.script_out_dir   ='./';
 params.matlab_out_dir   ='./';
-
+params.InField          ='spikes';
 %%% Una nota sui modelli che si fanno girare (e in particolare i loro
 % iperparametri)
 %Questi offrono diversi parametri...tipo

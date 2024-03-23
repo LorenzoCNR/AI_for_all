@@ -2,14 +2,14 @@ function [data_trials,out]   = cebraCompute(data_trials,params)
 % function [data_trials,out] = cebraCompute(data_trials,par)
 execinfo    = params.exec;
 if ~isempty(execinfo); t=tic; fprintf('Function: %s ',mfilename); end
-
+InField = params.InField;
 %% matrici vuote per mettere dati ratto
 rat_n       =[];
 rat_b       =[];
 % reconstruct trials
 nTrials     =length(data_trials);
 for iTrial=1:nTrials
-    rat_n=[rat_n; data_trials(iTrial).spikes'];
+    rat_n=[rat_n; data_trials(iTrial).(InField)'];
     rat_b=[rat_b; data_trials(iTrial).labels'];
 end
 
