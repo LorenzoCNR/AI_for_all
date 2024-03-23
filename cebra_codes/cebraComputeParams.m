@@ -30,6 +30,7 @@ params = struct('model_type',           'hypothesis',       ...
                 );
 params.exec             = true;
 params.script_name      ='wrap_py_rat_mod.py';
+params.script_transform ='transf_py_rat.py';
 params.script_out_dir   ='./';
 params.matlab_out_dir   ='./';
 

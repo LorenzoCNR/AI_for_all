@@ -3,6 +3,9 @@ function [data_trials,out]   = cebraCompute(data_trials,params)
 execinfo    = params.exec;
 if ~isempty(execinfo); t=tic; fprintf('Function: %s ',mfilename); end
 
+% data_trials=rat_data
+% params=cebraComputeParams();
+
 %% matrici vuote per mettere dati ratto
 rat_n       =[];
 rat_b       =[];
@@ -29,6 +32,13 @@ out.model_weghts = load(fullfile(matlab_out_dir, 'model_struct.mat'));
 
 cebra_output = load(fullfile(matlab_out_dir, 'cebra_output.mat'));
 out.cebra_output=cebra_output.cebra_output';
+%% leggo il percorso del modello salvato
+% model_path_file = fullfile(script_out_dir, 'model_path.txt'); % Assicurati che questo percorso sia corretto
+% fileID = fopen(model_path_file, 'r');
+% fitted_model_path = fgetl(fileID);
+% fclose(fileID);
+% Salv
+out.fitted_model_p = 'fitted_model.pkl';
 if ~isempty(execinfo); out.exectime=toc(t); fprintf('| Time Elapsed: %.2f s\n',out.exectime); end
 
 end

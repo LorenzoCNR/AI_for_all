@@ -17,16 +17,16 @@ import os
 #main_folder=r'/home/zlollo/CNR/git_out_cebra'
 #main_folder='/media/zlollo/STRILA/CNR neuroscience/'
 #main_folder=r'
-#output_directory =main_folder
 #os.chdir(main_folder)
 import sys
 
 #sys.path.append('/path/to/your/directory')
 #sys.path.insert(0,'/path/to/your/directory')
-#base_dir=r'/media/zlollo/STRILA/CNR neuroscience/'
-
-import time
-#os.chdir(base_dir)
+#base_dir=r'/media/zlollo/STRILA/CNR neuroscience/cebra_codes'
+# base_dir=r'C:\Users\zlollo2\Desktop\Strila_20_03_24\CNR neuroscience\cebra_codes'
+# import time
+# os.chdir(base_dir)
+# output_directory =base_dir
 
 #!pip install ripser
 #import ripser
@@ -46,6 +46,8 @@ from scipy.io import loadmat
 from cebra.datasets.hippocampus import *
 import sklearn.metrics
 import scipy.io
+import joblib
+
 from scipy.io import savemat
 from scipy.io import loadmat
 import gc
@@ -230,22 +232,26 @@ cebra_target_model = CEBRA(model_architecture=mod_arch,
 
 
 
-
 def run_model(model, data, labels, model_type):
-    if model_type == "hypothesis":
-        # If the model is in supervised mode, use both data and labels
-        model.fit(data, labels)
-  
-    elif model_type == "discovery":
-        ### solo dati time
-        model.fit(data)
-    elif model_type == "shuffle":
-        shuffled_labels = np.random.permutation(labels)
-        model.fit(data, shuffled_labels)
+        if model_type == "hypothesis":
+            # If the model is in supervised mode, use both data and labels
+            model.fit(data, labels)
+      
+        elif model_type == "discovery":
+            ### solo dati time
+            model.fit(data)
+        elif model_type == "shuffle":
+            shuffled_labels = np.random.permutation(labels)
+            model.fit(data, shuffled_labels)
+         # Assicurati che il percorso alla directory 'data' esista
 
-    with torch.no_grad():
-        return model.transform(data), model.model_.state_dict()
-
+            
+        joblib.dump(model, 'fitted_model.pkl')
+    
+    
+        with torch.no_grad():
+            return model.transform(data), model.model_.state_dict()
+    
 cebra_output, ceb_model = run_model(cebra_target_model, data_, label_, mod_type)
 
 # numpy_dict = {key: value.numpy() for key, value in ceb_model.items()}
@@ -258,13 +264,17 @@ numpy_model_ = {key.replace('.', '_'): value for key, value in ceb_model.items()
 numpy_model = {key: value.detach().cpu().numpy() for key, value in numpy_model_.items()}
 
 #norms = np.linalg.norm(cebra_output, axis=1)
+model_path = 'fitted_model.pkl'  # Se il modello è nella directory corrente, questo è sufficiente
 
+# Scrivi il percorso in un file di testo
+#with open('model_path.txt', 'w') as f:
+ #   f.write(model_path)
 
 scipy.io.savemat(os.path.join(output_directory, 'cebra_output.mat'), cebra_mat)
 scipy.io.savemat(os.path.join(output_directory, 'model_struct.mat'), numpy_model)
 
+
 ### salvo dati neurali e behavior
-  
 
 #### codice per gestire memoria
 
