@@ -29,6 +29,7 @@ out.model_weghts = load(fullfile(matlab_out_dir, 'model_struct.mat'));
 
 cebra_output = load(fullfile(matlab_out_dir, 'cebra_output.mat'));
 out.cebra_output=cebra_output.cebra_output';
+out.fitted_model_p = 'fitted_model.pkl';
 if ~isempty(execinfo); out.exectime=toc(t); fprintf('| Time Elapsed: %.2f s\n',out.exectime); end
 
 end
