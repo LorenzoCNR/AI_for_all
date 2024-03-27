@@ -1,14 +1,11 @@
 import sys
 import scipy.io
-
-from scipy.io import loadmat, savemat
-
+from scipy.io import loadmat
 import joblib
 import os
 
-
 def load_model(model_file, data):
-    # Carica il modello addestrato
+    # load model from file
     return joblib.load(model_file), loadmat(data)
 
 def transform_data(model, data_mat):
@@ -26,16 +23,16 @@ if __name__ == "__main__":
 
     print(output_directory)
     
-    # Carica il modello
-    model, data_ = load_model(model_file,os.path.join(input_directory,'data_n.mat'))
+    # load the fitted model
+    model, data_        = load_model(model_file,os.path.join(input_directory,'data_n.mat'))
 
-    # Trasforma i dati
-    transformed_data = transform_data(model,data_)
+    # predict on given data
+    transformed_data    = transform_data(model,data_)
     
-    transform_mat = {'transformed_data': transformed_data}
+    transform_mat       = {'transformed_data': transformed_data}
     
     try:
-        # Tentativo di trasformazione e salvataggio dei dati
+        # try to save projected data
         scipy.io.savemat(os.path.join(output_directory, 'transf_data.mat'), transform_mat)
     except Exception as e:
         print(f"Error during saving file: {e}")

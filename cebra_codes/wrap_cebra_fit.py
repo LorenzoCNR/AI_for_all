@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from cebra import CEBRA
 from scipy.io import loadmat
-from cebra.datasets.hippocampus import *
+#from cebra.datasets.hippocampus import *
 import scipy.io
 import joblib
 
@@ -77,7 +77,7 @@ except FileNotFoundError:
    print("model_params file is missing!!!")
 
 #############################################################
-# Verify is GPU is available
+# Verify if GPU is available
 if torch.cuda.is_available():
     # Print info on GPU
     print(f"GPU available: {torch.cuda.get_device_name(0)}")
@@ -86,10 +86,7 @@ else:
 
 
 ################################## CNN MODEL FIT ###############################
-
 torch.cuda.empty_cache()
-
-
 cebra_target_model = CEBRA(model_architecture=mod_arch,
                            distance=dist,
                            conditional= cond,

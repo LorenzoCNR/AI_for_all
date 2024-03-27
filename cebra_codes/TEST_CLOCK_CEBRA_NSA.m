@@ -79,6 +79,7 @@ test_directory                      = '/home/donnarumma/TESTS/CEBRA/SAPIENZA/';
 par.cebraCompute.script_fit         = '/home/donnarumma/tools/Cebra_for_all/cebra_codes/wrap_cebra_fit.py';
 par.cebraCompute.script_input_dir   = test_directory;
 par.cebraCompute.script_output_dir  = test_directory;
+par.cebraCompute.max_iter           = 100000;
 par.cebraCompute.output_dimension   = 12;
 par.cebraCompute.OutField           = 'cebra';
 disp(par.cebraCompute);
