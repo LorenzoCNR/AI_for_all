@@ -7,6 +7,8 @@ cebra_codes_dir                     = '/home/donnarumma/tools/Cebra_for_all/cebr
 % where to save outputs
 test_directory                      = '/home/donnarumma/TESTS/CEBRA/RAT/';
 %% Step 0. load data in raw format
+% git: 
+% mat
 data_folder                         = [cebra_codes_dir 'mat_rat_data/'];
 rat_behav_                          = load([data_folder 'rat_behav.mat']);
 rat_behav                           = rat_behav_.my_matrix;
@@ -26,7 +28,7 @@ par.cebraCompute.script_output_dir  = test_directory;
 par.cebraCompute.max_iter           = 1000;
 par.cebraCompute.output_dimension   = 3;
 disp(par.cebraCompute);
-[data_trials_test,out.cebraCompute] = cebraCompute(data_trials,par.cebraCompute);
+[~,out.cebraCompute]                = cebraCompute(data_trials,par.cebraCompute);
 % cebraProject
 par.cebraProject                    = cebraProjectParams();
 par.cebraProject.InField            = signal_name;
