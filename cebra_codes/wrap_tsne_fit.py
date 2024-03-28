@@ -18,11 +18,6 @@ import openTSNE
 
 ###from sklearn.model_selection import train_test_split
 
-def load_data(input_directory, data_filename='rat_n.mat'):
-    
-    data_path = os.path.join(input_directory, data_filename)
-    data_mat = loadmat(data_path)
-    return data_mat['rat_n'] 
 
 
 ### N.B. Ricorda di chiamare in matlab il file parametri params
@@ -62,6 +57,13 @@ def load_data(input_directory, data_filename='rat_n.mat'):
   
 # except FileNotFoundError:
 #     print(f"model_params file is missing!!!")
+
+def load_data(input_directory, data_filename='rat_n.mat'):
+    
+    data_path = os.path.join(input_directory, data_filename)
+    data_mat = loadmat(data_path)
+    return data_mat['rat_n'] 
+
 
 def load_params(input_directory,params_filename ):
     try:
@@ -106,12 +108,12 @@ if __name__ == "__main__":
     # data_filename = 'rat_n.mat'
     # params_filename = 'tsne_params.mat'
     # load data and params
-    data = load_data(input_directory, data_filename)
-    params = load_params(input_directory, params_filename)
+    data_ = load_data(input_directory, data_filename)
+    params_ = load_params(input_directory, params_filename)
 
     ## configure and train model
 
-    tsne_model = configure_and_fit_tsne(data, params)
+    tsne_model = configure_and_fit_tsne(data_, params_)
 
     # Save manifold or embedding :)
     #save_embedding(tsne_model.embedding_, output_directory, 'tsne_embedding.mat')
