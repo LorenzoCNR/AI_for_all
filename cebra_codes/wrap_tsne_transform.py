@@ -5,13 +5,13 @@ Created on Wed Mar 27 15:27:25 2024
 @author: zlollo2
 """
 
-#import os
 #os.chdir(r'C:\Users\zlollo2\Desktop\Strila_27_03_24\CNR neuroscience\cebra_codes')
-#import joblib as jl
-#import scipy
-#from scipy.io import loadmat, savemat
-#import openTSNE
-#import sys
+from scipy.io import loadmat, savemat
+import joblib as jl
+import openTSNE
+import os
+import scipy
+import sys
 
 
 def load_model(model_file, data):

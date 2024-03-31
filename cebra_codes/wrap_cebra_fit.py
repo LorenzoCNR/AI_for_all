@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+
+
 import os
+# wd=r'F:\CNR neuroscience\cebra_codes'
+# os.chdir(wd)
+
+# input_directory=wd
+# output_directory=wd
+
+
 import sys
 import numpy as np
 from cebra import CEBRA
@@ -116,7 +125,9 @@ def run_model(model, data, labels, model_type):
             shuffled_labels = np.random.permutation(labels)
             model.fit(data, shuffled_labels)
          # save model in the output directory 
-        joblib.dump(model, os.path.join(output_directory,'fitted_model.pkl'))
+        output_path = os.path.normpath(os.path.join(output_directory, 'fitted_model.pkl'))
+        joblib.dump(model, output_path)
+        #joblib.dump(model, os.path.join(output_directory,'fitted_model.pkl'))
         with torch.no_grad():
             return model.transform(data), model.model_.state_dict()
     

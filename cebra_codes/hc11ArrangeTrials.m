@@ -95,11 +95,11 @@ data_neur(:,end+1)=data_behav(:,end);
 
 nTrials     = max(data_behav(:,4));
 
-c1          = 'spikes';
-c2          = 'labels';
-c3          = 'times_sec';
+% c1          = 'spikes';
+% c2          = 'labels';
+% c3          = 'times_sec';
 
-data_struct = struct(c1, cell(1, nTrials), c2, cell(1, nTrials), c3, cell(1, nTrials));
+%data_struct = struct(c1, cell(1, nTrials), c2, cell(1, nTrials), c3, cell(1, nTrials));
 
 n_ms        = 25;
 n_s         = n_ms/1000;

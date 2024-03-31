@@ -5,7 +5,7 @@
 import os
 #os.chdir(r'/media/zlollo/STRILA/CNR neuroscience/cebra_codes')
 #input_directory=os.getcwd()
-output_directory=input_directory
+#output_directory=input_directory
 
 import numpy as np
 from sklearn.datasets import load_digits
