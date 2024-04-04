@@ -57,4 +57,6 @@ TRANSFORM files are  made up of two functions:
 - The main call wants the script name, the model_file (.pkl) both output and input 
   directory
 
-  Sun, 31.03.24. Upload tsne and umap main and miscellanea to run them on matlab. Check parameters spec and correct settings
+Sun, 31.03.24. Upload tsne and umap main and miscellanea to run them on matlab. Check parameters spec and correct settings
+
+Thur 04.04.24...Add main Cebra and Plot_cebra
