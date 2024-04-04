@@ -36,6 +36,23 @@ import inspect
 import torch
 from cebra.datasets.hippocampus import *
 import tensorflow as tf
+import random
+
+# Imposta seed per numpy
+np.random.seed(42)
+
+# Imposta seed per PyTorch
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # Per multi-GPU
+torch.backends.cudnn.deterministic = True  # Potrebbe ridurre le prestazioni
+torch.backends.cudnn.benchmark = False
+
+# Imposta seed per TensorFlow
+tf.random.set_seed(42)
+
+# Imposta seed per il modulo random di Python
+random.seed(42)
+
 
  #from tensorflow.python.client import device_lib
     
@@ -58,7 +75,7 @@ import tensorflow as tf
 
 
 
-def run_hip_models(base_path):
+def run_hip_models(base_path, params):
 
     os.chdir(base_path)
     ######################### DA CAMBIARE ##################################
@@ -66,59 +83,32 @@ def run_hip_models(base_path):
     hippocampus_pos = cebra.datasets.init('rat-hippocampus-single-achilles')
 
     
+    mod_arch=params.get("model_architecture",'offset10-model')
+    out_dim=int(params.get("output_dimension",3))
+    temp=int(params.get("temperature",1))
+    max_iter=int(params.get("max_iterations", 10000))
+    dist=params.get("distance",'cosine')
+    cond=params.get("conditional", 'time_delta')
+    time_off=int(params.get("time_offsets",10))
+    hyb=params.get("hybrid", "").strip('"')
+    batch_s=int(params.get("batch_size", 512))
+    l_r=float(params.get("learning_rate",3e-4))
     
-    ###### Load model hyperparameters
-    try:
-    
-        data_param=loadmat('params.mat')
-        
-        params = data_param['params']
-        
-        mod_arch= params['mod_arch'][0].item() 
-        mod_arch= mod_arch[0]
-        
-        out_dim= int(params['output_dimension'][0][0])
-        
-        temp=int(params['temperature'][0][0])
-        
-        max_iter=int(params['max_iter'][0][0])
-        
-        dist= params['distance'][0].item() 
-        dist= dist[0]
-        
-        cond= params['conditional'][0].item() 
-        cond= cond[0]
-        
-        time_off=int(params['time_offsets'][0][0])
-    
-    except:
-        mod_arch='offset10-model'
-        out_dim=3
-        temp=1
-        max_iter=10000
-        dist='cosine'
-        cond='time_delta'
-        time_off=10
-    
-    
-   
-    
-    #max_iterations = 10 ## defaut 5000
     
     neural_data=hippocampus_pos.neural
     behavior_data=hippocampus_pos.continuous_index.numpy()
     
     
-    behavior_dic={'dir':behavior_data[:,0],
-                  'right':behavior_data[:,1],
-                  'left':behavior_data[:,2]}
+   # behavior_dic={'dir':behavior_data[:,0],
+   #               'right':behavior_data[:,1],
+    #              'left':behavior_data[:,2]}
     
 
     
 
     cebra_posdir3_model = CEBRA(model_architecture=mod_arch,
-                            batch_size=512,
-                            learning_rate=3e-4,
+                            batch_size=batch_s,
+                            learning_rate=l_r,
                             temperature=temp, 
                             output_dimension=out_dim,
                             max_iterations=max_iter,
@@ -126,7 +116,8 @@ def run_hip_models(base_path):
                             conditional=cond,
                             device='cuda_if_available',
                             verbose=True,
-                            time_offsets=time_off)
+                            time_offsets=time_off,
+                            hybrid=hyb)
     
     cebra_posdir3_model.fit(neural_data,behavior_data)
     cebra_posdir3 = cebra_posdir3_model.transform(neural_data)

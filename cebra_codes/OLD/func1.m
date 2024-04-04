@@ -1,4 +1,4 @@
-function [model_weghts] = func1(data,params,input_dir,output_dir)
+function [model_weghts, cebra_output] = func1(data,params,input_dir,output_dir)
 
 
 % volendo si può dare come input aggiuntivo il numero di trial che vogliamo
@@ -12,9 +12,9 @@ function [model_weghts] = func1(data,params,input_dir,output_dir)
 rat_n=[];
 rat_b=[];
 % # trials
-%input_dir=input_directory
-%output_dir=output_directory
-%data=rat_data
+input_dir=input_directory
+output_dir=output_directory
+data=rat_data
 n_tr=size(data,2)
 
 %%% prendo un po' di dati a caso
@@ -28,9 +28,10 @@ save([mfilename 'rat_n.mat'], 'rat_n');
 save([mfilename 'rat_b.mat'], 'rat_b');
 
 cebra_dir=input_dir;
-script_name='wrap_py_rat_mod.py'
-script_path = [cebra_dir , script_name];
-%script_path;
+script_name='wrap_py_rat_mod.py';
+%script_path = [cebra_dir , script_name];
+script_path = fullfile(cebra_dir, script_name)
+script_path
 fprintf('Perform CEBRA fit...'); 
 save([mfilename 'params.mat'], 'params');
 
@@ -43,5 +44,5 @@ disp(command)
 %system(command)
 
 model_weghts=load(fullfile(output_dir, 'model_struct.mat'));
-
+cebra_output=load(fullfile(output_dir, 'cebra_output.mat'));
 end

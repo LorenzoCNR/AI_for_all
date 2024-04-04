@@ -37,8 +37,9 @@ import tensorflow as tf
 
 
 
+
 def plot_cebra(emb, label):
-    fig = plt.figure(figsize=(20, 5))
+    fig = plt.figure(figsize=(10, 5))
         
         
         # Variabili per gestire la colorbar unica
