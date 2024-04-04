@@ -23,13 +23,15 @@ from matplotlib.collections import LineCollection
 import inspect
 
 import torch
-import tensorflow as tf
+#import tensorflow as tf
 from pathlib import Path
 from datetime import datetime
 ##### cambiare eventualmente
 
 
-main_path=r'/media/zlollo/STRILA/CNR neuroscience/cebra_codes/Cebra_for_all/cebra_codes'
+#main_path=r'/media/zlollo/STRILA/CNR neuroscience/cebra_codes/Cebra_for_all/cebra_codes'
+main_path=r'/home/donnarumma/tools/Cebra_for_all/cebra_codes'
+
 os.chdir(main_path)
 #main_path=r'/home/zlollo/CNR/Cebra_for_all'
 
@@ -58,8 +60,8 @@ params = {
 
 
 
-from hip_models_0 import run_hip_models
-from fig_cebra import plot_cebra
+from hip_models_1 import run_hip_models
+from fig_cebra_1 import plot_cebra
 from cr_db_sql import create_database
 from cr_db_sql import save_fig
 from cr_db_sql import save_manif
