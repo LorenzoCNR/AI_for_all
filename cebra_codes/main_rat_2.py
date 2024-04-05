@@ -21,7 +21,7 @@ matplotlib.use('TkAgg')
 import joblib as jl
 from matplotlib.collections import LineCollection
 import inspect
-
+import h5py
 import torch
 #import tensorflow as tf
 from pathlib import Path
@@ -29,9 +29,8 @@ from datetime import datetime
 ##### cambiare eventualmente
 
 
-#main_path=r'/media/zlollo/STRILA/CNR neuroscience/cebra_codes/Cebra_for_all/cebra_codes'
+#main_path=r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
 main_path=r'/home/donnarumma/tools/Cebra_for_all/cebra_codes'
-
 os.chdir(main_path)
 #main_path=r'/home/zlollo/CNR/Cebra_for_all'
 
@@ -62,9 +61,14 @@ params = {
 
 from hip_models_1 import run_hip_models
 from fig_cebra_1 import plot_cebra
-from cr_db_sql import create_database
-from cr_db_sql import save_fig
-from cr_db_sql import save_manif
+from create_h5_store import create_or_open_hdf5
+from create_h5_store import save_manif
+#from create_h5_store import labels_to_str
+#from create_h5_store import generate_group_name
+#from cr_db_sql import create_database
+#from cr_db_sql import save_fig
+#from cr_db_sql import save_manif
+
 #from FIG2_mod import  Fig2_rat_hip
 # Now you can call run_hip_models() in your script
 
@@ -79,11 +83,29 @@ def main(params):
     #save_manif(manif, unique_name)
     #fig=plot_cebra(manif, labels)
     #save_fig(fig, fig_id="my_plot_id")
+    file_name = "manif_data.hdf5"
+
+    ### create a group of manifold per label
+    group_name= 'Cebra_behav'
+    include_labels = True  # vel False, sup vs unsup
+    labels = labels  # o le tue labels, se hai deciso di includerle
+
+    
+    with create_or_open_hdf5(file_name) as hdf5_file:
+        save_manif(hdf5_file, group_name, manif, labels=labels,
+        include_labels=include_labels)
+    
+  
+
+    # Opional: plotting data
+    # fig=plot_cebra(manif, labels)
+    # save_fig(fig, fig_id="my_plot_id")
     plot_cebra(manif, labels)
 
     input("Press any key to continue..")
 
-    #plot_cebra(manif, labels)
+
+
 
     return manif, labels
     
@@ -97,7 +119,12 @@ if __name__=="__main__":
     main(params)
 
 
-
+file_name = 'manif_data.hdf5'
+try:
+    with h5py.File(file_name, 'r') as f:
+        print(list(f.keys()))  # Stampa l'elenco dei gruppi/dataset per verificare la struttura
+except Exception as e:
+    print(e)
 
 
 
