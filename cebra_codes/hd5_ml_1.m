@@ -42,6 +42,6 @@ mnames=fieldnames(manif_db);
 % data_1=manif_db.manif_20240405_222955';
 data_1=manif_db.(mnames{end})';
 
-plot_manif(data_1, labels);
+plot_manif2(data_1, labels);
 
 
