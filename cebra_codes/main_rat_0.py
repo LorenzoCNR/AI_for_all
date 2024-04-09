@@ -42,9 +42,18 @@ main_path = Path(main_path_str)
 os.chdir(main_path)
 #main_path=r'/home/zlollo/CNR/Cebra_for_all'
 
+### data
+rat_neur=np.load('rat_neural.npy')
+#rat_behav=np.load('rat_behaviour_std.npy')
+rat_behav=np.load('rat_behaviour_mod.npy')
 
 
-IMAGES_PATH = main_path / "images_std" 
+### h5df name of file and group 
+### just change the grpup name 
+f_name="manif_file_0.hdf5"
+gr_name='manif_mod'
+####  image folder
+IMAGES_PATH = main_path / "images_mod" 
 IMAGES_PATH.mkdir(parents=True, exist_ok=True)
 
 #os.chdir(main_path)
@@ -84,17 +93,16 @@ params = {
 def main(params):
     #create_database() 
     base_path=main_path
-    neural_data=np.load('rat_neural.npy')
-    #labels=np.load('rat_behaviour_mod.npy')
-    labels=np.load('rat_behaviour_std.npy')
+    neural_data=rat_neur
+    labels=rat_behav
 
    # Fig2_rat_hip(dd, err_loss, mod_pred,base_path) 
     manif = run_hip_models(base_path,params,neural_data, labels)
     # create file to store everythn 
-    file_name = "manif_file_0.hdf5"
+    file_name = f_name
 
     ### create a group of manifold per label or per condition 
-    group_name= 'manif_std'
+    group_name= gr_name
     include_labels = True  # vel False, sup vs unsup
     labels = labels  # o le tue labels, se hai deciso di includerle
 

@@ -59,4 +59,9 @@ TRANSFORM files are  made up of two functions:
 
 Sun, 31.03.24. Upload tsne and umap main and miscellanea to run them on matlab. Check parameters spec and correct settings
 
-Thur 04.04.24...Add main Cebra and Plot_cebra
+-Thur 04.04.24...Add main Cebra and Plot_cebra
+
+- Fr 05.05.24...Add modified main for Cebra Reproducibility and create_hd5 to store data 
+  in hdf5 format; add hd5 matlab to call the data created in python with the two previos functions and plt_manif which is a modified version of plot2b_mod 
+
+- Tue 09.04.24...add modified main to run hip models and test one or three columns labels. Add new plot_file and Store_hd5_file and read and print store file
