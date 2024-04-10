@@ -61,8 +61,15 @@ def run_hip_models(base_path, params):
     
     neural_data=hippocampus_pos.neural
     behavior_data=hippocampus_pos.continuous_index.numpy()
-    
-    
+    #right=behavior_data[:,1]
+    #right = right.astype(bool)
+    #new_behavior_data=behavior_data[:,0]
+    #print(new_behavior_data)
+    #new_behavior_data[right]=-new_behavior_data[right];
+    #print(behavior_data)
+    #behavior_data=new_behavior_data
+    #print(behavior_data)
+    #input('aspetta')   
    # behavior_dic={'dir':behavior_data[:,0],
    #               'right':behavior_data[:,1],
     #              'left':behavior_data[:,2]}

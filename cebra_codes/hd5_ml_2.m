@@ -59,8 +59,8 @@ data_trials(1).repTrialName = trialNames(data_trials(1).repTrialType);
 par.plot_scatterGradient                 = plot_scatterGradientParams();
 par.plot_scatterGradient.InField         = 'cebra';
 par.plot_scatterGradient.InGradient      = 'gradients';
-par.plot_scatterGradient.lats            = [1,3];              % directions to be plot     
-%par.plot_scatterGradient.lats            = [2,3,1];              % directions to be plot     
+%par.plot_scatterGradient.lats            = [1,3];              % directions to be plot     
+par.plot_scatterGradient.lats            = [2,3,1];              % directions to be plot     
 par.plot_scatterGradient.reverse         = [false,false,true];   % reverse directions axis
 % start gradient color for each class
 par.plot_scatterGradient.cmapslight      = [[1.0,0.0,1.0]; ...   % left  start from magenta
