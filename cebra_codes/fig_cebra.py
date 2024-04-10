@@ -6,7 +6,7 @@ Created on Wed Apr  3 17:47:10 2024
 """
 #sys.path.insert(0,'/path/to/your/directory')
 import os
-#os.getcwd()
+os.getcwd()
 import sys
 #### Mettere la directory di interesse la stessa di matlab
 from pathlib import Path
@@ -19,20 +19,16 @@ import time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-#import joblib as jl
+import joblib as jl
 import cebra.datasets
 from cebra import CEBRA
-#from scipy.io import loadmat
-#from scipy.io import savemat
+from scipy.io import loadmat
+from scipy.io import savemat
 #from dataset import SingleRatDataset  
-from matplotlib.collections import LineCollection
-#from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
-#import sklearn.metrics
+import sklearn.metrics
 import inspect
-#import torch
-#from cebra.datasets.hippocampus import *
+import torch
 
-import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize

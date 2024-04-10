@@ -77,7 +77,7 @@ random.seed(42)
 
 
 
-def run_hip_models(base_path, params,neural_data,labels ):
+def run_hip_models_fit(base_path, params,neural_data,labels ):
 
     os.chdir(base_path)
     ######################### DA CAMBIARE ##################################
@@ -134,7 +134,9 @@ def run_hip_models(base_path, params,neural_data,labels ):
                             hybrid=hyb)
     
     cebra_posdir3_model.fit(neural_data,labels)
-    cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
+    joblib.dump(cebra_posdir3_model, "cebra_fit.pkl")
+    
+    #cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
     
     # #d_vis_hyp=data["visualization"]['hypothesis']
     
