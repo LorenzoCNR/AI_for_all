@@ -16,10 +16,12 @@ This is a temporary script file.
 #os.chdir(base_dir)
 
 import os
-os.getcwd()
+#os.getcwd()
 import sys
 from pathlib import Path
 import time
+import copy as cp
+import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -35,8 +37,8 @@ import sklearn.metrics
 import inspect
 import torch
 from cebra.datasets.hippocampus import *
-import tensorflow as tf
-import random
+#import tensorflow as tf
+#import random
 
 # Imposta seed per numpy
 np.random.seed(42)
@@ -48,7 +50,7 @@ torch.backends.cudnn.deterministic = True  # Potrebbe ridurre le prestazioni
 torch.backends.cudnn.benchmark = False
 
 # Imposta seed per TensorFlow
-tf.random.set_seed(42)
+#tf.random.set_seed(42)
 
 # Imposta seed per il modulo random di Python
 random.seed(42)
@@ -75,13 +77,13 @@ random.seed(42)
 
 
 
-def run_hip_models(base_path, params):
+def run_hip_models_fit(base_path, params,neural_data,labels ):
 
     os.chdir(base_path)
     ######################### DA CAMBIARE ##################################
     #### carico dati
-    hippocampus_pos = cebra.datasets.init('rat-hippocampus-single-achilles')
-
+    #hippocampus_pos = cebra.datasets.init('rat-hippocampus-single-achilles')
+    
     
     mod_arch=params.get("model_architecture",'offset10-model')
     out_dim=int(params.get("output_dimension",3))
@@ -95,13 +97,25 @@ def run_hip_models(base_path, params):
     l_r=float(params.get("learning_rate",3e-4))
     
     
-    neural_data=hippocampus_pos.neural
-    behavior_data=hippocampus_pos.continuous_index.numpy()
+    #neural_data=hippocampus_pos.neural.numpy()
+    #behavior_data=hippocampus_pos.continuous_index.numpy()
+    
+    #behavior_data_mod=cp.copy(behavior_data)
+    #behavior_data_mod[:,0]=np.where(behavior_data_mod[:,2]==1, 
+    #       -behavior_data_mod[:,0], behavior_data_mod[:,0])
+
     
     
-   # behavior_dic={'dir':behavior_data[:,0],
-   #               'right':behavior_data[:,1],
-    #              'left':behavior_data[:,2]}
+   ## np.save('rat_behaviour_std', behavior_data)
+   # np.save('rat_neural', neural_data)
+   ## np.save('rat_behaviour_mod', behavior_data_mod[:,0])
+
+    
+    #neural_data=np.load('rat_neural.npy')
+    #labels=np.load('rat_behaviour_mod.npy')
+    #labels=np.load('rat_behaviour_std.npy')
+   
+ 
     
 
     
@@ -119,8 +133,10 @@ def run_hip_models(base_path, params):
                             time_offsets=time_off,
                             hybrid=hyb)
     
-    cebra_posdir3_model.fit(neural_data,behavior_data)
-    cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
+    cebra_posdir3_model.fit(neural_data,labels)
+    joblib.dump(cebra_posdir3_model, "cebra_fit.pkl")
+    
+    #cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
     
     # #d_vis_hyp=data["visualization"]['hypothesis']
     
@@ -174,12 +190,11 @@ def run_hip_models(base_path, params):
     
     
    # return  dd, err_loss, mod1_pred
-    return cebra_posdir3, behavior_data
+    return cebra_posdir3
 if __name__ == "__main__":
     run_hip_models()
 
 
 
 
-#### plot in matlab
 

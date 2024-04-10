@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
+from pathlib import Path
 
 def create_or_open_hdf5(file_name):
     #Create or open an existing db.
@@ -44,3 +46,17 @@ def generate_group_name(labels):
     class_id = labels[0, 1]  
     return f"class_{int(class_id)}"
     '''
+
+def save_fig_with_timestamp(fig, fig_id, IMAGES_PATH, tight_layout=True, fig_extension="png", resolution=300):
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # plot name according to time stamp
+    filename = f"{fig_id}_{timestamp}.{fig_extension}"
+    # 
+    path = IMAGES_PATH / filename
+    # Apply tight layout  if requested
+    if tight_layout:
+        plt.tight_layout()
+    # Save image
+    fig.savefig(path, format=fig_extension, dpi=resolution)
+    plt.close(fig)
