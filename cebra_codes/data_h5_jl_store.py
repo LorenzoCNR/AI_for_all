@@ -142,3 +142,11 @@ def save_data(hdf5_file, group_name, dataset_name, data, labels=None, include_la
         else:
             group.create_dataset(label_dataset_name, data=labels)
             print(f"Labels included under '{group_name}/labels'.")
+
+def save_transformed_data(output_folder, data, file_name='transformed_data.hdf5'):
+    """
+
+"""
+
+    save_manif(hdf5_file, group_name, data, labels=labels, include_labels=include_labels)
+    print(f"Transformed data and labels saved in {group_name}")

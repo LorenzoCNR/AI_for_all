@@ -5,7 +5,6 @@ Created on Tue Dec 12 01:47:54 2023
 
 @author: zlollo
 """
-
 import os
 import sys
 from pathlib import Path
@@ -13,134 +12,106 @@ import time
 import numpy as np
 import matplotlib
 import joblib as jl
+import json
+import yaml
+import h5py
+from datetime import datetime
 
+from hip_models_fit import run_hip_models_fit
+from hip_models_transform import run_hip_models_transform
+from fig_cebra import plot_cebra
+from data_h5_jl_store import create_or_open_hdf5, save_data, save_manif, save_fig_with_timestamp, load_and_inspect_jl
 
 matplotlib.use('TkAgg')
 
-from matplotlib.collections import LineCollection
-import h5py
-#import tensorflow as tf
-from pathlib import Path
-from datetime import datetime
-from hip_models_fit import run_hip_models_fit
-from hip_models_transform import run_hip_models_transform
+def main():
+    # Load configuration
+    with open('config_cebra.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-#from-
-from fig_cebra import plot_cebra
-from create_h5_store import create_or_open_hdf5
-from create_h5_store import save_manif
-from  create_h5_store import save_fig_with_timestamp
+    main_path = Path(config['paths']['main_path'])
+    data_folder = Path(config['paths']['data_folder'])
+    output_folder=main_path
+    ### optionally give an alternative output folder
+    #output_folder = Path(config['paths']['output_folder'])
+    ### check if folder existe
+   # output_folder.mkdir(parents=True, exist_ok=True)
+### define a folder for images 
+    IMAGES_PATH = main_path / "images_std_div_et_imp" 
+    IMAGES_PATH.mkdir(parents=True, exist_ok=True)
 
-### run hip models 
+    # Load model parameters
+    model_params = config['model_params']
 
-# Now you can call run_hip_models() in your script
-# Provide parameters at the top of the code
-# Provide data within the main function from folder
-# Just change the group name if different purpose
-# image folder name (line 48)
+### STEP 1 Load data from original Achille.jl file
 
-##### cambiare eventualmente
+    # Load joblib (original Data)
+    jl_path = data_folder / 'achilles.jl'
+    data_Achilles = jl.load(jl_path)
+    print("Achilles Dict keys:", data_Achilles.keys())
 
-main_path_str=r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
+    Achille_neural = data_Achilles['spikes']
+    Achille_behav = data_Achilles['position']
 
-main_path = Path(main_path_str)
-os.chdir(main_path)
-#main_path=r'/home/zlollo/CNR/Cebra_for_all'
+    # Database names and group names from config
+    f_name = config['hd5_specifics']['db_name']
+    gr_name = config['hd5_specifics']['group_name']
 
-### data
-rat_neur=np.load('rat_neural.npy')
-#rat_behav=np.load('rat_behaviour_std.npy')
-rat_behav=np.load('rat_behaviour_mod.npy')
+### Step 2 store loaded data and parameters in a hd5 file
+    # Store Achilles data in HDF5 file
+    with create_or_open_hdf5(output_folder / f_name) as hdf5_file:
+        neural_data_path = config['hd5_specifics']['neural_data_path']
+        save_data(hdf5_file, gr_name, neural_data_path, Achille_neural, labels=[], include_labels=False)
+        
+        behav_data_path = config['hd5_specifics']['behav_data_path']
+        save_data(hdf5_file, gr_name, behav_data_path, Achille_behav, labels=[], include_labels=False)
 
+    # Load data and print parameters
+    with h5py.File(output_folder / f_name, 'r') as hdf:
+        print(f"Checking existence of {behav_data_path} and {neural_data_path} in HDF5 file.")
+        if behav_data_path in hdf:
+            dataset_behav = hdf[behav_data_path]
+            rat_behav = dataset_behav[:]
+            print("Successfully loaded behavioral data!", rat_behav)
+        else:
+            print(f"Dataset '{behav_data_path}' not found!")
 
-### h5df name of file and group 
-### just change the grpup name 
-f_name="manif_file_0.hdf5"
-gr_name='manif_mod_div_et_imp'
-####  image folder
-IMAGES_PATH = main_path / "images_mod_div_et_imp" 
-IMAGES_PATH.mkdir(parents=True, exist_ok=True)
+        if neural_data_path in hdf:
+            dataset_neural = hdf[neural_data_path]
+            rat_neur = dataset_neural[:]
+            print("Successfully loaded neural data!", rat_neur)
+        else:
+            print(f"Dataset '{neural_data_path}' not found!")
 
-os.chdir(main_path)
+        if gr_name in hdf:
+            group = hdf[gr_name]
+            loaded_params = {attr: group.attrs[attr] for attr in group.attrs.keys()}
+            print("Parameters loaded:")
+            for key, value in loaded_params.items():
+                print(f"{key}: {value}")
+        else:
+            print(f"Group '{gr_name}' not found!")
 
-os.getcwd()
-#from pathlib import Path
-
-
-'''
-
-
-'''
-params = {
-    "model_architecture": 'offset10-model',
-    "batch_size": "512",
-    "learning_rate": "3e-4",
-    "temperature": "1",
-    "output_dimension": "3",
-    "max_iterations": "5000",
-    "distance": "cosine",
-    "conditional": "time_delta",
-    "hybrid": "False",
-    "time_offsets": "10"
-    }
-
-
-
-#from create_h5_store import labels_to_str
-#from create_h5_store import generate_group_name
-#from cr_db_sql import create_database
-#from cr_db_sql import save_fig
-#from cr_db_sql import save_manif
-
-
-
-
-def main(params):
-    #create_database() 
-    base_path=main_path
-    neural_data=rat_neur
-    labels=rat_behav
-
-   # Fig2_rat_hip(dd, err_loss, mod_pred,base_path) 
-   # 1) fit and save model
-    model_fit = run_hip_models_fit(base_path,params,neural_data, labels)
-    # create file to store everythn 
-    model_fit_=jl.load('cebra_fit.pkl')
-
-    manif=run_hip_models_transform(model_fit_,base_path, neural_data)
-   
-    file_name = f_name
-
-    ### create a group of manifold per label or per condition 
-    group_name= gr_name
-    include_labels = True  # vel False, sup vs unsup
-    labels = labels  # o le tue labels, se hai deciso di includerle
-
+    # Step 3 fit the model adn save it in the given output folder
+    model_fit = run_hip_models_fit(main_path, model_params, rat_neur, rat_behav, output_folder)
     
-    with create_or_open_hdf5(file_name) as hdf5_file:
-        save_manif(hdf5_file,group_name,manif,labels=labels,include_labels=include_labels)
-    
-  
+    #à Step 4 transform given data according to saved model.
+    manif = run_hip_models_transform(model_fit, Achille_neural)
 
-    # Opional: plotting data
-    fig=plot_cebra(manif, labels)
-    ## Save figure in the given path (cfr line 30-40)
+
+    # Step 5 Save the transformed data into a separate HDF5 for manifolds
+    manif_db = config['hd5_specifics']['db_manif']
+    manif_group = config['hd5_specifics']['gr_manif1']
+    with create_or_open_hdf5(output_folder / manif_db) as hdf5_file:
+        save_manif(hdf5_file, manif_group, manif, labels=[], include_labels=False)
+        print(f"Manifold data saved in {manif_group} within {manif_db}.")
+
+    # Visualizza i risultati
+    fig = plot_cebra(manif, rat_behav)
     save_fig_with_timestamp(fig, "my_plot_id", IMAGES_PATH)
-    #plot_cebra(manif, labels)
 
-    input("Press any key to continue..")
-
-
-   # return manif
-   # 
-    #return  dd, err_loss, mod_pred
-    
-if __name__=="__main__":
-
-
-    #dd, err_loss, mod_pred= 
-
-    main(params)
+if __name__ == "__main__":
+    main()
 
 
 

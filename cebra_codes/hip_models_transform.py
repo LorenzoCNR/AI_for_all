@@ -58,19 +58,18 @@ random.seed(42)
 
 
 
-def run_hip_models_transform(model_fit, base_path, neural_data):
-    #model_fit= joblib.load("cebra_fit.pkl")
+def run_hip_models_transform(model_path, neural_data):
+    # Carica il modello
+    model_fit = jl.load(model_path)
 
-    os.chdir(base_path)
-    ######################### DA CAMBIARE ##################################
-    #### carico dati
-    #hippocampus_pos = cebra.datasets.init('rat-hippocampus-single-achilles')
-    
-    cebra_posdir3 = model_fit.transform(neural_data)
+    # Applica trasformazione
+    transformed_data = model_fit.transform(neural_data)
+
+    return transformed_data
 
       
    # return  dd, err_loss, mod1_pred
-    return cebra_posdir3
+    
 if __name__ == "__main__":
     run_hip_models_transform()
 

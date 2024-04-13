@@ -6,35 +6,25 @@ This is a temporary script file.
 """
 
 #### Mettere la directory di interesse la stessa di matlab
-
-
-#!pip install ripser
-#import ripser
-#sys.path.append('/path/to/your/directory')
-#sys.path.insert(0,'/path/to/your/directory')
-#base_dir=r'/home/zlollo/CNR/Cebra_for_all'
-#os.chdir(base_dir)
-
 import os
 #os.getcwd()
 import sys
 from pathlib import Path
 import time
-import copy as cp
 import random
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import joblib as jl
 import cebra.datasets
 from cebra import CEBRA
 from scipy.io import loadmat
 from scipy.io import savemat
 #from dataset import SingleRatDataset  # Assumendo che il codice sia in 'dataset.py'
+from matplotlib.collections import LineCollection
+from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 import sklearn.metrics
 import inspect
 import torch
-from cebra.datasets.hippocampus import *
 #import tensorflow as tf
 #import random
 
@@ -53,142 +43,35 @@ torch.backends.cudnn.benchmark = False
 # Imposta seed per il modulo random di Python
 random.seed(42)
 
-
- #from tensorflow.python.client import device_lib
-    
-'''
- # Verifica la disponibilità di GPU
-    if tf.test.is_gpu_available():
-        print("TensorFlow sta utilizzando una GPU.")
-    else:
-        print("TensorFlow non sta utilizzando una GPU.")
-    
-    
-    print(device_lib.list_local_devices())
-    
-    def get_available_devices():
-        local_device_protos = device_lib.list_local_devices()
-        return [x.name for x in local_device_protos]
-    with tf.device('/device:GPU:0'):
-        print(get_available_devices())
-  '''
-
-
-
-def run_hip_models_fit(base_path, params,neural_data,labels ):
-
+def run_hip_models_fit(base_path, params, neural_data, labels, output_folder):
     os.chdir(base_path)
-    ######################### DA CAMBIARE ##################################
-    #### carico dati
-    #hippocampus_pos = cebra.datasets.init('rat-hippocampus-single-achilles')
-    
-    
-    mod_arch=params.get("model_architecture",'offset10-model')
-    out_dim=int(params.get("output_dimension",3))
-    temp=int(params.get("temperature",1))
-    max_iter=int(params.get("max_iterations", 10000))
-    dist=params.get("distance",'cosine')
-    cond=params.get("conditional", 'time_delta')
-    time_off=int(params.get("time_offsets",10))
-    hyb=params.get("hybrid", "").strip('"')
-    batch_s=int(params.get("batch_size", 512))
-    l_r=float(params.get("learning_rate",3e-4))
-    
-    
-    #neural_data=hippocampus_pos.neural.numpy()
-    #behavior_data=hippocampus_pos.continuous_index.numpy()
-    
-    #behavior_data_mod=cp.copy(behavior_data)
-    #behavior_data_mod[:,0]=np.where(behavior_data_mod[:,2]==1, 
-    #       -behavior_data_mod[:,0], behavior_data_mod[:,0])
 
-    
-    
-   ## np.save('rat_behaviour_std', behavior_data)
-   # np.save('rat_neural', neural_data)
-   ## np.save('rat_behaviour_mod', behavior_data_mod[:,0])
+    # load parameters
+    mod_arch = params.get("model_architecture", 'offset10-model')
+    out_dim = int(params.get("output_dimension", 3))
+    temp = int(params.get("temperature", 1))
+    max_iter = int(params.get("max_iterations", 10000))
+    dist = params.get("distance", 'cosine')
+    cond = params.get("conditional", 'time_delta')
+    time_off = int(params.get("time_offsets", 10))
+    hyb = params.get("hybrid",False)
+    batch_s = int(params.get("batch_size", 512))
+    l_r = float(params.get("learning_rate", 3e-4))
 
-    
-    #neural_data=np.load('rat_neural.npy')
-    #labels=np.load('rat_behaviour_mod.npy')
-    #labels=np.load('rat_behaviour_std.npy')
-   
- 
-    
+    # 
+    cebra_model = CEBRA(model_architecture=mod_arch, batch_size=batch_s,
+                        learning_rate=l_r, temperature=temp, output_dimension=out_dim,
+                        max_iterations=max_iter, distance=dist, conditional=cond,
+                        device='cuda_if_available', verbose=True, time_offsets=time_off, hybrid=hyb)
 
-    
+    # fit the model
+    cebra_model.fit(neural_data, labels)
 
-    cebra_posdir3_model = CEBRA(model_architecture=mod_arch,
-                            batch_size=batch_s,
-                            learning_rate=l_r,
-                            temperature=temp, 
-                            output_dimension=out_dim,
-                            max_iterations=max_iter,
-                            distance=dist,
-                            conditional=cond,
-                            device='cuda_if_available',
-                            verbose=True,
-                            time_offsets=time_off,
-                            hybrid=hyb)
+    # Save model
+    model_path = os.path.join(output_folder, "cebra_fit.pkl")
+    jl.dump(cebra_model, model_path)
     
-    cebra_posdir3_model.fit(neural_data,labels)
-    joblib.dump(cebra_posdir3_model, "cebra_fit.pkl")
-    
-    #cebra_posdir3 = cebra_posdir3_model.transform(neural_data)
-    
-    # #d_vis_hyp=data["visualization"]['hypothesis']
-    
-    
-    # hypoth={"embedding": cebra_posdir3, "label": behavior_data}
-    
-
-    # cebra_time3_model = CEBRA(model_architecture=mod_arch,
-    #                         batch_size=512,
-    #                         learning_rate=3e-4,
-    #                         temperature=temp,
-    #                         output_dimension=out_dim,
-    #                         max_iterations=max_iter,
-    #                         distance=dist,
-    #                         conditional='time',
-    #                         device='cuda_if_available',
-    #                         verbose=True,
-    #                         time_offsets=time_off)
-    
-    # cebra_time3_model.fit(neural_data)
-    # cebra_time3 = cebra_time3_model.transform(neural_data)
-    
-    # ttime={"embedding": cebra_time3, "label": behavior_data}
-    
-    
-    # ### modello ibrido con info temporali e posizionali 
-    # cebra_hybrid_model = CEBRA(model_architecture=mod_arch,
-    #                         batch_size=512,
-    #                         learning_rate=3e-4,
-    #                         temperature=temp,
-    #                         output_dimension=out_dim,
-    #                         max_iterations=max_iter,
-    #                         distance=dist,
-    #                         conditional=cond,
-    #                         device='cuda_if_available',
-    #                         verbose=True,
-    #                         time_offsets=time_off,
-    #                         hybrid = True)
-    
-    # cebra_hybrid_model.fit(neural_data, behavior_data)
-    # cebra_hybrid = cebra_hybrid_model.transform(neural_data)
-    
-    # hhybrid={"embedding": cebra_hybrid, "label": behavior_data}
-    
-    
-    ############################## Questo in matlab ###############################
-    
-    
-    
-    ##
-    
-    
-   # return  dd, err_loss, mod1_pred
-    #return cebra_posdir3_model
+    return model_path
 if __name__ == "__main__":
     run_hip_models_fit()
 
