@@ -1,0 +1,38 @@
+paths:
+  main_path: "/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes"
+  data_folder: "/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/data/rat_hippocampus"
+  output_folder: "/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes"
+
+model_params:
+  model_architecture: "offset10-model"
+  batch_size: 512
+  learning_rate: 0.0003
+  temperature: 1
+  output_dimension: 3
+  max_iterations: 5000
+  distance: "cosine"
+  conditional: "time_delta"
+  hybrid: False
+  time_offsets: 10
+  verbose: True
+
+hd5_specifics:
+  db_name: "rat_data.hdf5"
+  neural_data_path: "/Achilles_data/neural"
+  behavior_data_path: "/Achilles_data/behavior"
+  manifold_data_path: "/Achilles_data/manifold"
+  save_manifold_timestamps: True
+
+additional_settings:
+  model_output_path: "cebra_model.pkl"
+  transformed_data_path: "transformed_data.hdf5"
+  seed: 42
+  #### option for tensforms
+  save_manifold: True  # or False if you don't want to use timestamps
+  model_input_path: "path/to/your/model_output.pkl"
+  transformed_data_path: "/Achilles_data/transformed"
+  
+  ### manifold store
+  db_manif: "manif_file_1"
+  gr_manif1: "/manif_std_div_et_imp"
+
