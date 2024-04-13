@@ -15,16 +15,17 @@ import joblib as jl
 import json
 import yaml
 import h5py
+import time
 from datetime import datetime
 
 from hip_models_fit import run_hip_models_fit
 from hip_models_transform import run_hip_models_transform
 from fig_cebra import plot_cebra
-from data_h5_jl_store import create_or_open_hdf5, save_data, save_manif, save_fig_with_timestamp, load_and_inspect_jl
-
+from data_h5_jl_store import create_or_open_hdf5, save_data, save_manif, save_fig_with_timestamp,save_parameters
 matplotlib.use('TkAgg')
 
 def main():
+    
     # Load configuration
     with open('config_cebra.yaml', 'r') as file:
         config = yaml.safe_load(file)
@@ -66,34 +67,40 @@ def main():
         behav_data_path = config['hd5_specifics']['behav_data_path']
         save_data(hdf5_file, gr_name, behav_data_path, Achille_behav, labels=[], include_labels=False)
 
+
+        save_parameters(hdf5_file, gr_name, config['model_params'])
     # Load data and print parameters
     with h5py.File(output_folder / f_name, 'r') as hdf:
-        print(f"Checking existence of {behav_data_path} and {neural_data_path} in HDF5 file.")
-        if behav_data_path in hdf:
+        print(f"Checking existence of datasets and parameters in HDF5 file at '{output_folder / f_name}'.")
+        
+        # Check for the existence of each dataset within their respective group paths
+        if behav_data_path in hdf and neural_data_path in hdf:
+            # Load and print behavioral data
             dataset_behav = hdf[behav_data_path]
             rat_behav = dataset_behav[:]
             print("Successfully loaded behavioral data!", rat_behav)
-        else:
-            print(f"Dataset '{behav_data_path}' not found!")
-
-        if neural_data_path in hdf:
+            
+            # Load and print neural data
             dataset_neural = hdf[neural_data_path]
             rat_neur = dataset_neural[:]
             print("Successfully loaded neural data!", rat_neur)
         else:
-            print(f"Dataset '{neural_data_path}' not found!")
+            print(f"One or both datasets not found! '{behav_data_path}', '{neural_data_path}'")
 
+        # Check and print parameters if the group exists
         if gr_name in hdf:
             group = hdf[gr_name]
-            loaded_params = {attr: group.attrs[attr] for attr in group.attrs.keys()}
-            print("Parameters loaded:")
-            for key, value in loaded_params.items():
-                print(f"{key}: {value}")
+            if group.attrs:
+                loaded_params = {attr: group.attrs[attr] for attr in group.attrs.keys()}
+                print("Parameters loaded:")
+                for key, value in loaded_params.items():
+                    print(f"{key}: {value}")
+            else:
+                print("No parameters found in the group.")
         else:
             print(f"Group '{gr_name}' not found!")
-
-    # Step 3 fit the model adn save it in the given output folder
-    model_fit = run_hip_models_fit(main_path, model_params, rat_neur, rat_behav, output_folder)
+        # Step 3 fit the model adn save it in the given output folder
+    model_fit = run_hip_models_fit(main_path, loaded_params, rat_neur, rat_behav, output_folder)
     
     #à Step 4 transform given data according to saved model.
     manif = run_hip_models_transform(model_fit, Achille_neural)
@@ -109,6 +116,9 @@ def main():
     # Visualizza i risultati
     fig = plot_cebra(manif, rat_behav)
     save_fig_with_timestamp(fig, "my_plot_id", IMAGES_PATH)
+    end_time = time.time()
+    print(f"Total execution time: {end_time - start_time:.2f} seconds")
+
 
 if __name__ == "__main__":
     main()
