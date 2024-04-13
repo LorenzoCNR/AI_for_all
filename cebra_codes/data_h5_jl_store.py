@@ -134,24 +134,6 @@ def save_fig_with_timestamp(fig, fig_id, IMAGES_PATH, tight_layout=True, fig_ext
 '''
 def create_or_modify_hdf5(file_name):
 
-    with h5py.File(file_name, 'a') as hdf:
-        #
-        if 'gruppo1' not in hdf:
-            gruppo1 = hdf.create_group('gruppo1')
-        else:
-            gruppo1 = hdf['gruppo1']
-        
-        # Aggiungi un nuovo dataset al gruppo1 se non esiste, altrimenti lo sovrascrivi
-        data1 = np.random.randn(100)  # Dati esemplificativi
-        if 'dataset1' in gruppo1:
-            del gruppo1['dataset1']  # Rimuovi il dataset esistente prima di ricrearlo
-        dataset1 = gruppo1.create_dataset('dataset1', data=data1)
-        
-        # Creare un nuovo gruppo e dataset all'interno di esso
-        if 'gruppo2' not in hdf:
-            gruppo2 = hdf.create_group('gruppo2')
-            data2 = np.random.randn(200)  # Dati esemplificativi
-            dataset2 = gruppo2.create_dataset('dataset2', data=data2)
 '''
 ####
 
