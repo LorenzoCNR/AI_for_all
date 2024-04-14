@@ -11,7 +11,9 @@ def initialize_hdf5(config_path):
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
 
-    hdf5_file_path = Path(config['paths']['main_path']) / config['hd5_specifics']['db_name']
+    main_folder= Path(config['paths']['main_path']) 
+    hdf5_file_path = main_folder/ config['hd5_specifics']['db_name']
+    
     output_folder = Path(config['paths']['output_folder'])
     data_folder=Path(config['paths']['data_folder'])
 
@@ -28,13 +30,18 @@ def initialize_hdf5(config_path):
             hdf.attrs[setting] = value
 
         # other attributes 
+        hdf.attrs['main_folder'] = str(main_folder)
+        hdf.attrs['output_folder'] = str(output_folder)  # Here adding the output folder explicitly
         hdf.attrs['model_output_path'] = str(output_folder / config['additional_settings']['model_output_path'])
-        hdf.attrs['transformed_data_path'] = str(output_folder / config['additional_settings']['transformed_data_path'])
+        #hdf.attrs['transformed_data_path'] = str(output_folder / config['additional_settings']['transformed_data_path'])
         hdf.attrs['seed'] = config['additional_settings']['seed']
         ## path for transform
         hdf.attrs['model_input_path'] = str(output_folder / config['additional_settings']['model_input_path'])
         hdf.attrs['manifold_data_path'] = config['hd5_specifics']['manifold_data_path']
         hdf.attrs['save_manifold_timestamps'] = config['hd5_specifics']['save_manifold_timestamps']
+        hdf.attrs['transformed_data_name'] = config['hd5_specifics']['transformed_data_name']
+        #hdf.attrs['save_manifold'] = config['additional_setting']['transformed_data_name']
+
 
 
     print(f"Initialized HDF5 file at {hdf5_file_path}")

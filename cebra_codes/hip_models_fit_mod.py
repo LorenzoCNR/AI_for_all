@@ -104,5 +104,6 @@ def run_hip_models_fit(hdf5_path):
         print(f"Model saved at {model_output_path}")
 
 if __name__ == "__main__":
+ 
     hdf5_path = sys.argv[1]
     run_hip_models_fit(hdf5_path)
