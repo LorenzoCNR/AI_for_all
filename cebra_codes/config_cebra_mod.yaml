@@ -25,12 +25,13 @@ hd5_specifics:
 
 additional_settings:
   model_output_path: "cebra_model.pkl"
+  model_input_path: "cebra_model.pkl"
+
   transformed_data_path: "transformed_data.hdf5"
   seed: 42
   #### option for tensforms
   save_manifold: True  # or False if you don't want to use timestamps
-  model_input_path: "path/to/your/model_output.pkl"
-  transformed_data_path: "/Achilles_data/transformed"
+ 
   
   ### manifold store
   db_manif: "manif_file_1"
