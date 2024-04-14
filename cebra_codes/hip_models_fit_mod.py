@@ -24,6 +24,8 @@ from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 import sklearn.metrics
 import inspect
 import torch
+if len(sys.argv) < 2:
+    print("Too few args!!!")
 
 '''
 def update_hdf5_attributes(hdf5_path, updates):
@@ -102,5 +104,5 @@ def run_hip_models_fit(hdf5_path):
         print(f"Model saved at {model_output_path}")
 
 if __name__ == "__main__":
-    hdf5_path = r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes/rat_data.hdf5'
+    hdf5_path = sys.argv[1]
     run_hip_models_fit(hdf5_path)
