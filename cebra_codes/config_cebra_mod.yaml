@@ -20,20 +20,20 @@ hd5_specifics:
   db_name: "rat_data.hdf5"
   neural_data_path: "/Achilles_data/neural"
   behavior_data_path: "/Achilles_data/behavior"
+  transformed_data_name: "transformed_data.hdf5"
   manifold_data_path: "/Achilles_data/manifold"
   save_manifold_timestamps: True
 
 additional_settings:
   model_output_path: "cebra_model.pkl"
   model_input_path: "cebra_model.pkl"
-
-  transformed_data_path: "transformed_data.hdf5"
+  data_to_transform: "/Achilles_data/neural"
   seed: 42
   #### option for tensforms
-  save_manifold: True  # or False if you don't want to use timestamps
+  #save_manifold: True  # or False if you don't want to use timestamps
  
   
   ### manifold store
-  db_manif: "manif_file_1"
-  gr_manif1: "/manif_std_div_et_imp"
+  #db_manif: "manif_file_1"
+  #gr_manif1: "/manif_std_div_et_imp"
 
