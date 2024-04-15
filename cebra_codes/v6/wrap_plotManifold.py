@@ -28,8 +28,8 @@ params = {
     "hybrid": "False",
     "time_offsets": "10",
     "seed": "32",
-    "InNeural": "neural_data.hd5",
-    "InBehavior": "behavior_data.hd5"
+    "manifold_filename": "neural.hd5",
+    "behavior_filename": "behavior.hd5"
     }
 manifold_filename   = "manifold.hdf5"
 behavior_filename   = "behavior.hdf5"
