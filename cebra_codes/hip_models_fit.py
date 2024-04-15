@@ -28,19 +28,20 @@ import torch
 #import tensorflow as tf
 #import random
 
-# Imposta seed per numpy
+# numpy seed
 np.random.seed(42)
 
-# Imposta seed per PyTorch
+# Pytorch seed
 torch.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # Per multi-GPU
-torch.backends.cudnn.deterministic = True  # Potrebbe ridurre le prestazioni
+# multi-GPU seed
+torch.cuda.manual_seed_all(42)  
+torch.backends.cudnn.deterministic = True 
 torch.backends.cudnn.benchmark = False
 
-# Imposta seed per TensorFlow
+# TF seed
 #tf.random.set_seed(42)
 
-# Imposta seed per il modulo random di Python
+# Seed random module python
 random.seed(42)
 
 def run_hip_models_fit(base_path, params, neural_data, labels, output_folder):

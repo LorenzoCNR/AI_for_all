@@ -22,19 +22,22 @@ import inspect
 import torch
 #import tensorflow as tf
 #import random
-if len(sys.argv) < 2:
-    print("Too few args!!!")
 
-def set_seeds(seed):
-    np.random.seed(seed)
-    import torch
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    import random
-    random.seed(seed)
-    if torch.backends.cudnn.enabled:
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+# numpy seed
+np.random.seed(42)
+
+# Pytorch seed
+torch.manual_seed(42)
+# multi-GPU seed
+torch.cuda.manual_seed_all(42)  
+torch.backends.cudnn.deterministic = True 
+torch.backends.cudnn.benchmark = False
+
+# TF seed
+#tf.random.set_seed(42)
+
+# Seed random module python
+random.seed(42)
 
 
  #from tensorflow.python.client import device_lib
@@ -78,47 +81,19 @@ update_hdf5_attributes(hdf5_path, updates)
 
 
 
-def run_hip_models_transform(hdf5_path, external_data_path=None):
-    with h5py.File(hdf5_path, 'r+') as hdf:
-        # Load model
-        model_input_path = hdf.attrs['model_input_path']
-        model_fit = jl.load(model_input_path)
-
-        # load data
-        if external_data_path:
-            ### 
-            data = np.load(external_data_path)  
-        else:
-            # default data are neural data
-            data_path = hdf.attrs['data_to_transform']
-            data = hdf[data_path][:]
-
-        seed = hdf.attrs['seed']
-        set_seeds(seed)
+def run_hip_models_transform(model_path, neural_data):
+    # load model
+    model_fit = jl.load(model_path)
+    #seed=42
+    #seed = set_seeds(seed)
 
         # 
-        transformed_data = model_fit.transform(data)
+    transformed_data = model_fit.transform(neural_data)
 
-        # Output management
-        output_folder = Path(hdf.attrs['output_folder'])
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_hdf5_path = output_folder / f"transformed_data_{timestamp}.hdf5"
-
-        # Salva i dati trasformati
-        with h5py.File(output_hdf5_path, 'w') as out_hdf:
-            group = out_hdf.create_group("TransformedData")
-            group.create_dataset("transformed_data", data=transformed_data, compression='gzip', compression_opts=9)
-            print(f"Transformed data saved in {output_hdf5_path}")
-
+    return transformed_data
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <path_to_hdf5> [external_data_path]")
-        sys.exit(1)
-    
-    hdf5_path = sys.argv[1]
-    external_data_path = sys.argv[2] if len(sys.argv) > 2 else None
-    run_hip_models_transform(hdf5_path, external_data_path)
+    run_hip_models_transform()
 
 
 
