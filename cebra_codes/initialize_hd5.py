@@ -35,6 +35,8 @@ def initialize_hdf5(config_path):
         hdf.attrs['model_output_path'] = str(output_folder / config['additional_settings']['model_output_path'])
         #hdf.attrs['transformed_data_path'] = str(output_folder / config['additional_settings']['transformed_data_path'])
         hdf.attrs['seed'] = config['additional_settings']['seed']
+        hdf.attrs['model_type'] = config['additional_settings']['model_type']
+
         ## path for transform
         hdf.attrs['model_input_path'] = str(output_folder / config['additional_settings']['model_input_path'])
         hdf.attrs['manifold_data_path'] = config['hd5_specifics']['manifold_data_path']

@@ -75,10 +75,34 @@ updates = {
 }
 update_hdf5_attributes(hdf5_path, updates)
 '''
+def save_manif_data(hdf5_path, manif, labels=None, include_labels=False, group_name="TransformedData"):
+    with h5py.File(hdf5_path, 'a') as hdf:  # 'a' for append or create if not exist
+        if group_name not in hdf:
+            group = hdf.create_group(group_name)
+        else:
+            group = hdf[group_name]
+
+        dataset_name = 'transformed_data'
+        labels_name = 'labels'
+
+        # Update or create the transformed data dataset
+        if dataset_name in group:
+            del group[dataset_name]  # Remove old data if exists
+        group.create_dataset(dataset_name, data=manif, compression='gzip', compression_opts=9)
+        print(f"Transformed data saved under '{group_name}/{dataset_name}'.")
+
+        # Update or create the labels dataset if required
+        if include_labels and labels is not None:
+            if labels_name in group:
+                del group[labels_name]  # Remove old labels if exists
+            group.create_dataset(labels_name, data=labels)
+            print(f"Labels included under '{group_name}/{labels_name}'.")
+
+        # Update metadata with the current time
+        hdf.attrs['last_modified'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-
-def run_hip_models_transform(hdf5_path, external_data_path=None):
+def run_hip_models_transform(hdf5_path, external_data_path=None,include_labels=False):
     with h5py.File(hdf5_path, 'r+') as hdf:
         # Load model
         model_input_path = hdf.attrs['model_input_path']
@@ -91,7 +115,10 @@ def run_hip_models_transform(hdf5_path, external_data_path=None):
         else:
             # default data are neural data
             data_path = hdf.attrs['data_to_transform']
-            data = hdf[data_path][:]
+            labels_path = hdf.attrs['labels_']
+
+            data = hdf[data_path][:]    
+            labels=hdf[labels_path][:]
 
         seed = hdf.attrs['seed']
         set_seeds(seed)
@@ -101,15 +128,13 @@ def run_hip_models_transform(hdf5_path, external_data_path=None):
 
         # Output management
         output_folder = Path(hdf.attrs['output_folder'])
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_hdf5_path = output_folder / f"transformed_data_{timestamp}.hdf5"
+        output_hdf5_path = output_folder / "transformed_data.hdf5"
 
-        # Salva i dati trasformati
-        with h5py.File(output_hdf5_path, 'w') as out_hdf:
-            group = out_hdf.create_group("TransformedData")
-            group.create_dataset("transformed_data", data=transformed_data, compression='gzip', compression_opts=9)
-            print(f"Transformed data saved in {output_hdf5_path}")
+        # Saved transformed data
+        save_manif_data(output_hdf5_path, transformed_data, labels=labels if include_labels else None, include_labels=include_labels)
+        print(f"Transformed data saved in {output_hdf5_path}")
 
+       
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -118,7 +143,7 @@ if __name__ == "__main__":
     
     hdf5_path = sys.argv[1]
     external_data_path = sys.argv[2] if len(sys.argv) > 2 else None
-    run_hip_models_transform(hdf5_path, external_data_path)
+    run_hip_models_transform(hdf5_path, external_data_path, include_labels=True)
 
 
 

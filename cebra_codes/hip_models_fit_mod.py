@@ -85,13 +85,14 @@ def run_hip_models_fit(hdf5_path):
 
         model_output_path = hdf.attrs['model_output_path']
         seed = hdf.attrs['seed']
-        set_seeds(seed)
+        set_seeds(int(seed))
 
         # Initialize and configure the CEBRA model
         cebra_model = CEBRA(**model_params)
         
         # Fit the model according to the specified type
         model_type = hdf.attrs.get('model_type', 'hypothesis')
+        print(model_type)
         if model_type == 'hypothesis':
             cebra_model.fit(neural_data, labels)
         elif model_type == 'discovery':
