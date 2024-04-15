@@ -113,11 +113,13 @@ def main():
         save_manif(hdf5_file, manif_group, manif, labels=[], include_labels=False)
         print(f"Manifold data saved in {manif_group} within {manif_db}.")
 
-    # Visualizza i risultati
+    # plots
+
     fig = plot_cebra(manif, rat_behav)
     save_fig_with_timestamp(fig, "my_plot_id", IMAGES_PATH)
-    end_time = time.time()
-    print(f"Total execution time: {end_time - start_time:.2f} seconds")
+    #end_time = time.time()
+    #print(f"Total execution time: {end_time - start_time:.2f} seconds")
+
 
 
 if __name__ == "__main__":

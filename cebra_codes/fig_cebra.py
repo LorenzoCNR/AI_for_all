@@ -60,12 +60,12 @@ def plot_cebra(emb, label):
         # Create scatter plots
         # Note: 'c' parameter is now used correctly with color values
         scatter_left = ax.scatter(emb[idx_left, 0], emb[idx_left, 1], emb[idx_left, 2],
-                                 c=label[idx_left,0],cmap="cool", s=0.5)
+                                 c=label[idx_left,0],cmap="cool_r", s=0.5)
         cbar_left = fig.colorbar(scatter_left, ax=ax, pad=0.1)
         cbar_left.set_label('Left')
         
         scatter_right = ax.scatter(emb[idx_right, 0], emb[idx_right, 1], emb[idx_right, 2],
-                                  c=label[idx_right,0],s=0.5)
+                                  c=label[idx_right,0], cmap="summer_r",s=0.5)
       
         cbar_right = fig.colorbar(scatter_right, ax=ax, pad=0.1)
         cbar_right.set_label('Right')
@@ -76,11 +76,11 @@ def plot_cebra(emb, label):
         idx_left = label[:, 0] < 0
 
         scatter_pos = ax.scatter(emb[idx_right, 0], emb[idx_right, 1], emb[idx_right, 2],
-                                 c=label[idx_right,0],   s=0.5, )
+                                 c=label[idx_right,0],  cmap="summer_r",  s=0.5, )
         cbar_right = fig.colorbar(scatter_pos, ax=ax, pad=0.1)
         cbar_right.set_label('Right')
         scatter_neg= ax.scatter(emb[idx_left, 0], emb[idx_left, 1], emb[idx_left, 2],
-                                 c=label[idx_left,0],cmap="cool", s=0.5)
+                                 c=label[idx_left,0],cmap="cool_r", s=0.5)
         cbar_left = fig.colorbar(scatter_neg, ax=ax, pad=0.1)
         cbar_left.set_label('Left')
 
