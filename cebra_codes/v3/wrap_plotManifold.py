@@ -39,13 +39,11 @@ from hip_models_1 import run_hip_models
 from fig_cebra_1 import plot_cebra
 from create_h5_store import create_or_open_hdf5
 from create_h5_store import save_manif
-
 def plot_results (hdf5_path):
-
- # Opional: plotting data
+    # Opional: plotting data
     with h5py.File(hdf5_path, 'r') as hdf:
-        labels           = hdf['/Cebra_behav/labels'][:]
-        transformed_data = hdf['/Cebra_behav/manifold'][:]
+        labels           = hdf['/data/labels'][:]
+        transformed_data = hdf['/data/manifold'][:]
         plot_cebra(transformed_data, labels)
 
 if __name__ == "__main__":

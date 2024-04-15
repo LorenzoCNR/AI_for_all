@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Dec 12 01:47:54 2023
-
-@author: zlollo
-"""
-
-import os
 
 import matplotlib
 import h5py
@@ -15,9 +7,6 @@ matplotlib.use('TkAgg')
 
 #main_path=r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
 main_path=r'/home/donnarumma/tools/Cebra_for_all/cebra_codes'
-#os.chdir(main_path)
-
-#os.getcwd()
 
 params = {
     "model_architecture": 'offset10-model',
@@ -30,15 +19,13 @@ params = {
     "conditional": "time_delta",
     "hybrid": "False",
     "time_offsets": "10",
-    "seed": "35"
+    "seed": "10"
     }
 
 from hip_models_1 import run_hip_models
-from fig_cebra_1 import plot_cebra
-from create_h5_store import create_or_open_hdf5
-from create_h5_store import save_manif
 import random
-
+output_filename = "cebra_manifold.hdf5"
+   
 def main(params):
     #create_database() 
     base_path=main_path
@@ -52,8 +39,6 @@ def main(params):
     for n in range(1, N+1):
         params['seed']=random.randint(1,maxI)
         manif, labels = run_hip_models(base_path,params)
-        output_filename = "encoded_manifold.hdf5"
-        input('Wait')
         # save data in 
         with h5py.File(output_filename, 'w') as out_hdf:
             group = out_hdf.create_group(group_name)
@@ -64,10 +49,7 @@ def main(params):
     return manif, labels
     
 if __name__=="__main__":
-
     main(params)
-
-    output_filename = "encoded_manifold.hdf5"
         
 try:
     with h5py.File(output_filename, 'r') as f:
