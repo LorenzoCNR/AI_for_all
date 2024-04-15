@@ -28,7 +28,7 @@ params = {
     "max_iterations": "10000",
     "distance": "cosine",
     "conditional": "time_delta",
-    "hybrid": "True",
+    "hybrid": "False",
     "time_offsets": "10",
     "seed": "32"
     }
@@ -54,6 +54,7 @@ def main(params):
            
     for n in range(1, N+1):
         params['seed']=random.randint(1,maxI)
+        params['seed']=1;
         manif, labels = run_hip_models(base_path,params)
         file_name = "manif_data.hdf5"
 
