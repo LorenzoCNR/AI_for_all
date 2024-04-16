@@ -61,12 +61,9 @@ def main(modelParams_filename):
 
 
     
-    random.seed(seed);
     maxI = 10^5;
     # seed
-    params['seed']  = random.randint(1,maxI)
-    sd              = params.get("seed");
-    random.seed(sd)
+    random.seed(seed)
     np.random.seed(random.randint(1,maxI))
     # seed PyTorch
     torch.manual_seed(random.randint(1,maxI))
