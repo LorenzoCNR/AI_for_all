@@ -36,14 +36,15 @@ def main(modelParams_filename):
         maxI                = int(hdf.attrs['maxI'])
 
     # seed 
-    random.seed(seed)                                   # random
-    np.random.seed(random.randint(1,maxI))              # numpy
-    # seed PyTorch
-    torch.manual_seed(random.randint(1,maxI))
-    torch.cuda.manual_seed_all(random.randint(1,maxI))  # multi-GPU
-    if torch.backends.cudnn.enabled:
-        torch.backends.cudnn.deterministic  = True      # may reduce performance
-        torch.backends.cudnn.benchmark      = False
+    if seed!=0:
+        random.seed(seed)                                   # random
+        np.random.seed(random.randint(1,maxI))              # numpy
+        # seed PyTorch
+        torch.manual_seed(random.randint(1,maxI))
+        torch.cuda.manual_seed_all(random.randint(1,maxI))  # multi-GPU
+        if torch.backends.cudnn.enabled:
+            torch.backends.cudnn.deterministic  = True      # may reduce performance
+            torch.backends.cudnn.benchmark      = False
 
     # load behavior
     with h5py.File(behavior_filename, 'r') as hdf:
@@ -57,7 +58,6 @@ def main(modelParams_filename):
     cebra_model.fit(neural_data,behavior_data)
  
     # save model
-    #cebra_model.to('cpu');
     torch.save(cebra_model, model_filename)
     print(f"Model saved at {model_filename}")
 
