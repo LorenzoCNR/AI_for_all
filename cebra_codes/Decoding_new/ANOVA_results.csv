@@ -1,0 +1,11 @@
+,group1,group2,meandiff,p-adj,lower,upper,reject
+0,cebra_behav,cebra_hybrid,25.6103,0,24.3675,26.853,True
+1,cebra_behav,cebra_time,27.6123,0,26.3695,28.855,True
+2,cebra_behav,tsne,3.651,0,2.4083,4.8937,True
+3,cebra_behav,umap,14.5131,0,13.2704,15.7559,True
+4,cebra_hybrid,cebra_time,2.002,0.0002,0.7592,3.2447,True
+5,cebra_hybrid,tsne,-21.9593,0,-23.202,-20.7166,True
+6,cebra_hybrid,umap,-11.0971,0,-12.3399,-9.8544,True
+7,cebra_time,tsne,-23.9613,0,-25.204,-22.7185,True
+8,cebra_time,umap,-13.0991,0,-14.3419,-11.8564,True
+9,tsne,umap,10.8621,0,9.6194,12.1049,True
