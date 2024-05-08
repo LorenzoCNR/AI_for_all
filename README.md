@@ -65,3 +65,7 @@ Sun, 31.03.24. Upload tsne and umap main and miscellanea to run them on matlab. 
   in hdf5 format; add hd5 matlab to call the data created in python with the two previos functions and plt_manif which is a modified version of plot2b_mod 
 
 - Tue 09.04.24...add modified main to run hip models and test one or three columns labels. Add new plot_file and Store_hd5_file and read and print store file
+
+- Sun 20.04.24...Add_decoding
+
+- Wed 08-05-24...Nuovo decoding
