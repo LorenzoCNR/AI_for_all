@@ -185,16 +185,16 @@ def decoding_mod(pos_decoder, dir_decoder, emb_test, label_test):
 cebra_model = CEBRA(model_architecture='offset10-model',
                         batch_size=256,
                         learning_rate=0.003,
-                        temperature=3.213,
+                        temperature=1,
                         output_dimension=3,
                         max_iterations=10000,
                         distance='cosine',
                         conditional='time_delta',
                         device='cuda_if_available',
                         verbose=True,
-                        num_hidden_units=64,
+                        num_hidden_units=32,
                         time_offsets=10,
-                        hybrid = False)
+                        hybrid = True)
 
 ### consider the call CEBRE(**model_params)
 
@@ -341,8 +341,8 @@ def main(model_type, num_iterations=30):
 
 
 if __name__ == "__main__":
-    model_type = 'cebra_time'  # Can be changed to cebra_behavior, umap, or tsne
-    results_cebra_time= main(model_type)
+    model_type = 'cebra_behavior'  # Can be changed to cebra_behavior, umap, or tsne
+    results_cebra_hybrid_std= main(model_type)
     print("Completed processing for:", model_type)
 
 #results_cebra_behav=results_cebra_hybrid
@@ -355,13 +355,16 @@ if __name__ == "__main__":
 cebra_time=pd.DataFrame(results_cebra_time)
 cebra_behav=pd.DataFrame(results_cebra_behav)
 cebra_hybrid=pd.DataFrame(results_cebra_hybrid)
+cebra_hybrid2=pd.DataFrame(results_cebra_hybrid_std)
+
 tsne_=pd.DataFrame(results_tsne)
 umap_=pd.DataFrame(results_umap)
 
 
 decoding_results={'cebra_time': cebra_time,'cebra_behav': cebra_behav,
                  'cebra_hybrid': cebra_hybrid,
-                 'tsne': tsne_ , 'umap': umap_ }
+                 'tsne': tsne_ , 'umap': umap_ ,
+                 'cebra_hybrid2': cebra_hybrid2}
 
 
 def get_metrics(results):
@@ -439,7 +442,8 @@ show_boxplot(
         "cebra_time",
         "cebra_hybrid",
         "tsne",
-        "umap"
+        "umap",
+        'cebra_hybrid2'
     ],
 )
 ticks = [0, 10, 20, 30, 40, 50, 65]
@@ -453,6 +457,7 @@ ax.set_yticklabels(
         "CEBRA-Hybrid",
         "t-SNE",
         "UMAP",
+        "CEBRA-Hybrid 2"
      
     ]
 )
@@ -465,7 +470,7 @@ cebra_hybrid.to_csv('cebra_hybrid_decode.csv', index=False)
 cebra_behav.to_csv('cebra_behav_decode.csv', index=False)
 umap_.to_csv('umap_decode.csv', index=False)
 tsne_.to_csv('tsne_decode.csv', index=False)
-
+cebra_hybrid2.to_csv('cebra_hybrid2_decode.csv', index=False)
 
 ##### ANOVA e post hoc (Pairwise comparisons)
 
@@ -509,7 +514,7 @@ def get_metrics2(results):
 
 stats_achille,anova_achille, tukey_achille =get_metrics2(decoding_results)
 
-
+anova_achille.to_csv('anova_achille_csv',index=True)
 stats_achille.to_csv('mean_var_models.csv', index=True)
 tukey_achille.to_csv('anova_pairwise.csv', index=False)
 
