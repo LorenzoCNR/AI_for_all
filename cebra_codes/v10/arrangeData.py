@@ -8,7 +8,7 @@ model_params = {
     "learning_rate": "3e-4",
     "temperature": "1",
     "output_dimension": "3",
-    "max_iterations": "10000",
+    "max_iterations": "100",
     "distance": "cosine",
     "conditional": "time_delta",
     "hybrid": "False",

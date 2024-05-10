@@ -3,8 +3,8 @@ save_path   ='~/PROJS/exec/';
 v10_path    = '/home/donnarumma/OneDrive/tools/Cebra_for_all/cebra_codes/v10/';
 
 %          arrange model encode plot
-%options = [ true  true   true  true];  % all python checks
-options = [false false  false false];   % only matlab plot
+options = [ true  true   true  true];  % all python checks
+% options = [false false  false false];   % only matlab plot
 close all;
 if options(1)
     % arrange Data

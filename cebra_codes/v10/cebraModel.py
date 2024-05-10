@@ -55,6 +55,11 @@ def main(modelParams_filename):
 
     # fit model
     cebra_model = CEBRA(**model_params)
+    print(neural_data.shape)
+    input('neural data size')
+    print(behavior_data.shape)
+    input('behavior data size')
+    
     cebra_model.fit(neural_data,behavior_data)
  
     # save model
