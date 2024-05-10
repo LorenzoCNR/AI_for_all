@@ -17,7 +17,7 @@ os.chdir(r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_c
 #base_dir=r'F:\CNR neuroscience'
 import logging
 import time
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+#os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 #os.chdir(base_dir)
 import openTSNE
 import scipy.sparse as sp
@@ -184,15 +184,15 @@ def decoding_mod(pos_decoder, dir_decoder, emb_test, label_test):
 
 cebra_model = CEBRA(model_architecture='offset10-model',
                         batch_size=256,
-                        learning_rate=0.002,
+                        learning_rate=0.003,
                         temperature=1,
                         output_dimension=3,
-                        max_iterations=1000,
+                        max_iterations=10000,
                         distance='cosine',
                         conditional='time_delta',
                         device='cuda_if_available',
                         verbose=True,
-                        num_hidden_units=64,
+                        num_hidden_units=32,
                         time_offsets=10,
                         hybrid = True)
 
@@ -284,10 +284,10 @@ def main(model_type, num_iterations=30):
         print("Train Model on internal training set...")
         #For CEBRA time or unsupervised models like UMAP/TSNE
         if model_type in ['cebra_time', 'umap', 'tsne']:
-            inner_fit=model.fit(X_train_internal)  
+            inner_fit=model.fit(X_train)  
         # CEBRA behaviour wants labels            
         elif model_type == 'cebra_behavior':
-            inner_fit=model.fit(X_train_internal, y_train_internal) 
+            inner_fit=model.fit(X_train, y_train) 
 
 
         emb_train_internal = inner_fit.transform(X_train_internal)
@@ -299,12 +299,14 @@ def main(model_type, num_iterations=30):
         print(f"Best k is: {best_k} with validation score: {val_score}")
 
         # Re-train model on the entire training dataset
-        print("Re-train model on entire training dataset...")
-        if model_type in ['cebra_time', 'umap', 'tsne']:
-            outer_fit=model.fit(X_train)  # Re-fit using the entire training dataset
-        elif model_type == 'cebra_behavior':
-            outer_fit=model.fit(X_train, y_train)
+        # print("Re-train model on entire training dataset...")
+        # if model_type in ['cebra_time', 'umap', 'tsne']:
+        #     outer_fit=model.fit(X_train)  # Re-fit using the entire training dataset
+        # elif model_type == 'cebra_behavior':
+        # outer_fit=model.fit(X_train, y_train)
        
+        outer_fit=inner_fit
+        
         emb_train = outer_fit.transform(X_train)
 
         # Configure decoders
@@ -340,10 +342,10 @@ def main(model_type, num_iterations=30):
 
 if __name__ == "__main__":
     model_type = 'cebra_behavior'  # Can be changed to cebra_behavior, umap, or tsne
-    results_cebra_hybrid= main(model_type)
+    results_cebra_hybrid_std= main(model_type)
     print("Completed processing for:", model_type)
 
-
+#results_cebra_behav=results_cebra_hybrid
 #print(torch.cuda.is_available())  # Mostra True se CUDA è disponibile
 #print(torch.version.cuda)      
 
@@ -353,13 +355,16 @@ if __name__ == "__main__":
 cebra_time=pd.DataFrame(results_cebra_time)
 cebra_behav=pd.DataFrame(results_cebra_behav)
 cebra_hybrid=pd.DataFrame(results_cebra_hybrid)
+cebra_hybrid2=pd.DataFrame(results_cebra_hybrid_std)
+
 tsne_=pd.DataFrame(results_tsne)
 umap_=pd.DataFrame(results_umap)
 
 
 decoding_results={'cebra_time': cebra_time,'cebra_behav': cebra_behav,
                  'cebra_hybrid': cebra_hybrid,
-                 'tsne': tsne_ , 'umap': umap_ }
+                 'tsne': tsne_ , 'umap': umap_ ,
+                 'cebra_hybrid2': cebra_hybrid2}
 
 
 def get_metrics(results):
@@ -437,7 +442,8 @@ show_boxplot(
         "cebra_time",
         "cebra_hybrid",
         "tsne",
-        "umap"
+        "umap",
+        'cebra_hybrid2'
     ],
 )
 ticks = [0, 10, 20, 30, 40, 50, 65]
@@ -451,6 +457,7 @@ ax.set_yticklabels(
         "CEBRA-Hybrid",
         "t-SNE",
         "UMAP",
+        "CEBRA-Hybrid 2"
      
     ]
 )
@@ -463,7 +470,7 @@ cebra_hybrid.to_csv('cebra_hybrid_decode.csv', index=False)
 cebra_behav.to_csv('cebra_behav_decode.csv', index=False)
 umap_.to_csv('umap_decode.csv', index=False)
 tsne_.to_csv('tsne_decode.csv', index=False)
-
+cebra_hybrid2.to_csv('cebra_hybrid2_decode.csv', index=False)
 
 ##### ANOVA e post hoc (Pairwise comparisons)
 
@@ -507,6 +514,7 @@ def get_metrics2(results):
 
 stats_achille,anova_achille, tukey_achille =get_metrics2(decoding_results)
 
-
-tukey_achille.to_csv('anova_and_pairwise.csv', index=False)
+anova_achille.to_csv('anova_achille_csv',index=True)
+stats_achille.to_csv('mean_var_models.csv', index=True)
+tukey_achille.to_csv('anova_pairwise.csv', index=False)
 
