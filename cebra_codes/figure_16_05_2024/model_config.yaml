@@ -1,0 +1,8 @@
+input_dir: '/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
+output_dir: '/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
+rat_name: 'achilles'
+params_file: 'model_params_1.yaml'
+output_file: 'manifold_1.hdf5'
+model_type: 'umap'
+use_grid: False
+replace: True 
