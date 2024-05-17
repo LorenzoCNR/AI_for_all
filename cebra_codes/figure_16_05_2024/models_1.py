@@ -13,15 +13,15 @@ import os
 import sys
 import warnings
 import typing
-os.chdir(os.getcwd())
-os.getcwd()
+#os.chdir(os.getcwd())
+#os.getcwd()
 
 #### windows
 #base_dir=r'F:\CNR_neuroscience\cebra_git'
 ## ubuntu
 #base_dir=r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git'
 
-os.chdir(base_dir)
+#os.chdir(base_dir)
 
 import argparse
 import yaml
@@ -193,27 +193,27 @@ def main(input_dir, output_dir, rat, hdf5_name, param_file, model_type, use_grid
         save_results(os.path.join(output_dir, hdf5_name), model_type, p, embeddings, replace)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some parameters for the model.')
-    parser.add_argument('--config', type=str, required=True, help='Path to the configuration YAML file')
+    # parser = argparse.ArgumentParser(description='Process some parameters for the model.')
+    # parser.add_argument('--config', type=str, required=True, help='Path to the configuration YAML file')
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    # Caricare i parametri dal file di configurazione
-    with open(args.config, 'r') as file:
-        config = yaml.safe_load(file)
+    # # Caricare i parametri dal file di configurazione
+    # with open(args.config, 'r') as file:
+    #     config = yaml.safe_load(file)
     
-    input_dir = config['input_dir']
-    output_dir = config['output_dir']
-    rat_name = config['rat_name']
-    params_file = config['params_file']
-    path_to_yaml = os.path.join(input_dir, params_file)
-    output_file = config['output_file']
-    path_to_output = os.path.join(output_dir, output_file)
-    model_type = config['model_type']
-    use_grid = config['use_grid']
-    replace = config['replace']
+    # input_dir = config['input_dir']
+    # output_dir = config['output_dir']
+    # rat_name = config['rat_name']
+    # params_file = config['params_file']
+    # path_to_yaml = os.path.join(input_dir, params_file)
+    # output_file = config['output_file']
+    # path_to_output = os.path.join(output_dir, output_file)
+    # model_type = config['model_type']
+    # use_grid = config['use_grid']
+    # replace = config['replace']
 
-    main(input_dir, output_dir, rat_name, path_to_output, path_to_yaml, model_type, use_grid, replace)
+    # main(input_dir, output_dir, rat_name, path_to_output, path_to_yaml, model_type, use_grid, replace)
     
     
     
@@ -229,18 +229,18 @@ if __name__ == "__main__":
     
     # args = parser.parse_args()
     
-    # input_dir = r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
-    # output_dir = r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
-    # rat_name = 'achilles'
-    # params_file = 'model_params_1.yaml'
-    # path_to_yaml = os.path.join(input_dir, params_file)
-    # output_file = 'manifold_1.hdf5'
-    # path_to_output = os.path.join(input_dir, output_file)
-    # model_type = 'cebra_hybrid'
-    # use_grid = True
-    # replace = True
-    # main(input_dir, output_dir, rat_name, path_to_output, path_to_yaml, 
-    #      model_type, use_grid,replace)
+    input_dir = r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
+    output_dir = r'/media/zlollo/STRILA/CNR_neuroscience/cebra_git/Cebra_for_all/cebra_codes'
+    rat_name = 'achilles'
+    params_file = 'model_params_1.yaml'
+    path_to_yaml = os.path.join(input_dir, params_file)
+    output_file = 'manifold_1.hdf5'
+    path_to_output = os.path.join(input_dir, output_file)
+    model_type = 'cebra_hybrid'
+    use_grid = True
+    replace = True
+    main(input_dir, output_dir, rat_name, path_to_output, path_to_yaml, 
+          model_type, use_grid,replace)
 
         # parser = argparse.ArgumentParser(description="Run models and save embeddings.")
     # parser.add_argument("input_dir", type=str, help="Directory containing input data files")

@@ -26,4 +26,10 @@ il main vuole in input:
 - replace (True o False) se True sostituisce all'interno del gruppo il dataset
 
 
-il file plots ....
+il file plots_1...(N.B. questo funziona da spyder e va automatizzato...)
+- carica i dati del ratto per le etichette
+- legge il contenuto del file hdf creato con models che contiene tutti gli embedding per tutti  i framework (stampa i nomi ) finc get dataset names
+-  ci sono delle funzioni (3, rename dataset, generate new name e rename all dataset in group) che servono a rendere più leggibili i nomi nei grafici (soprattutto in fase plot)
+- funzione per estrarre gli embedding per framework (extract datasets)
+- funzione per plottare i dati in loop (plot datasets in group) in finestre di dimensione scelta (group size = 4)
+- Salvataggio figure 
