@@ -15,7 +15,7 @@ il file models_1 integra diverse funzioni:
 - salvataggio dei risultati con creazione del dataset e del gruppo se non esistono e possibilità di 
 	sostituire la manifiold se esistente che avrà per nome la data e i valori dei parametri in grid 
 
-il main vuole in input:
+il main (che può girare anche con la semplice chiamata python models_1.y, senza argomenti) vuole in input:
 - directory di input
 - directory di output
 - nome del ratto
@@ -24,10 +24,10 @@ il main vuole in input:
 - tipo di modello (cebra_time, cebra_behavior, cebra_hybrid, umap, tsne)....
 - se usare o meno la griglia di parametri (nel caso negativo, di quelli in griglia usa il primo della lista)
 - replace (True o False) se True sostituisce all'interno del gruppo il dataset
-
+Ci sono già dei valori di default per ogni parametro
 
 il file plots_1...(N.B. questo funziona da spyder e va automatizzato...)
-- carica i dati del ratto per le etichette
+- carica i dati del ratto per le labels
 - legge il contenuto del file hdf creato con models che contiene tutti gli embedding per tutti  i framework (stampa i nomi ) finc get dataset names
 -  ci sono delle funzioni (3, rename dataset, generate new name e rename all dataset in group) che servono a rendere più leggibili i nomi nei grafici (soprattutto in fase plot)
 - funzione per estrarre gli embedding per framework (extract datasets)
