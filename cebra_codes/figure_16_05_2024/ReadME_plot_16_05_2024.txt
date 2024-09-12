@@ -21,7 +21,7 @@ il main (che può girare anche con la semplice chiamata python models_1.y, senza
 - nome del ratto
 - nome del file output (percorso e nome del file hd5)
 - nome del file parametri.yaml (percorso e nome )
-- tipo di modello (cebra_time, cebra_behavior, cebra_hybrid, umap, tsne)....
+- tipo di modello (cebra_time, cebra_behavior, cebra_hybrid, umap, tsne, conv_pivae (okkio che ha problemi con tf)....
 - se usare o meno la griglia di parametri (nel caso negativo, di quelli in griglia usa il primo della lista)
 - replace (True o False) se True sostituisce all'interno del gruppo il dataset
 Ci sono già dei valori di default per ogni parametro
