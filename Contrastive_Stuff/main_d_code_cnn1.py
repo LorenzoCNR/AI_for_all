@@ -63,19 +63,18 @@ def setup_paths():
 
 
 ###WINDOWS
-#main_root = r"F:\CNR_neuroscience\Consistency_across\Codice Davide\EEG-ANN-Pipeline"
-#input_dir=r"F:\CNR_neuroscience\Consistency_across\Codice Davide"
+#main_root = r"F:\........"
+#input_dir=r"F:\............"
 ### UBUNTU
-#main_root = r"/media/zlollo/UBUNTU 24_0/CNR_neuroscience/Consistency_across/Contrastive_Stuff/EEG-ANN-Pipeline/"
+#main_root = r"/media/............."
 
-#input_dir=r"/media/zlollo/UBUNTU 24_0/CNR_neuroscience/Consistency_across/Contrastive_Stuff/"
+#input_dir=r"/media/................."
 
 
 #print(sys.path)
    # Check paths
 def main(args):
    
-    # Proceed with the rest of the function only if setup_paths succeeded
     z_train, z_val, labels_train, labels_val, posdir_decode_CL = run_d_code(
         input_dir=args.input_dir,
         output_dir=args.output_dir,

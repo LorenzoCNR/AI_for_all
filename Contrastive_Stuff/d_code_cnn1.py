@@ -3,48 +3,18 @@
 
 # In[215]:
 # windows
-# input_dir=r'F:\CNR_neuroscience\Consistency_across\Codice Davide'
-# main_root=r'F:\CNR_neuroscience\Consistency_across\Codice Davide\EEG-ANN-Pipeline'
+# input_dir=r'F:\........'
+# main_root=r'F:\....'
 
 #### Ubuntu
-#main_root = r"/media/zlollo/UBUNTU 24_0/CNR_neuroscience/Consistency_across/Codice Davide/EEG-ANN-Pipeline/"
-#input_dir = r"/media/zlollo/UBUNTU 24_0/CNR_neuroscience/Consistency_across/Codice Davide/"
+#main_root = r"/media/zlollo/........."
+#input_dir = r"/media/zlollo/........."
 
 
 
 import os
 import sys
 from pathlib import Path
-#  # Trova la directory radice del progetto
-# #project_root = Path(__file__).resolve().parent  # Modify if necessary
-
-# project_root = Path.cwd()  # This will use the current working directory
-
-
-#  # Percorso a "EEG-ANN-Pipeline"
-# eeg_pipeline_path = project_root / "EEG-ANN-Pipeline"
-# input_dir= project_root.parent/"data/rat_hippocampus"
-#  # Percorso alla directory "contrastive_output" (output directory)
-# output_dir = project_root / "contrastive_output"
-
-#     # Aggiungi "EEG-ANN-Pipeline" al path
-# if str(eeg_pipeline_path) not in sys.path:
-#      sys.path.append(str(eeg_pipeline_path))
-
-#     # Crea la directory di output se non esiste
-# output_dir.mkdir(exist_ok=True)
-
-#     # Cambia la directory di lavoro alla radice del progetto
-# os.chdir(project_root)
-
-    # Ritorna i percorsi configurati
-
-
-#output_dir = input_dir
-#os.chdir(input_dir)
-#if main_root not in sys.path:
-#    sys.path.append(main_root)
-#sys.path
 
 # 
 from some_functions import plot_embs
@@ -80,12 +50,11 @@ torch.manual_seed(42)
 random.seed(42)
 np.random.seed(42)
 
-# Configurazione GPU
+# Config GPU
 torch.cuda.manual_seed(42)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-# Add the parent directory to the system path
 
 # backend or inline plots
 # %matplotlib inline
@@ -96,7 +65,6 @@ torch.backends.cudnn.benchmark = False
 # plt.ion()
 # plt.show()
 # plt.pause(10)  
-
 
 # Load data from the specified path
 
@@ -159,16 +127,16 @@ def create_windows(dataset, window, shift, chns):
 # Build the model encoder.
 def build_model(filters, dropout, latents, num_timepoints, chns, num_units=None, groups=1,normalize=True):
     """
-    Costruisce un modello con:
-    - chns: numero di canali in ingresso (filtri input).
-    - filters: numero di filtri per i layer convolutivi (filtri output).
-    - latents: dimensione dello spazio latente.
-    - num_timepoints: dimensione temporale della finestra.
-    - dropout: tasso di dropout.
-    - num_units: opzionale, dimensione nascosta intermedia.
+    Build a cnn1d model with:
+    - chns: Input channels.
+    - filters: convolutional layer(s) filters.
+    - latents: outpuit dimension (latent space).
+    - num_timepoints: window dimension (test the optimal one).
+    - dropout:  dropout.
+    - num_units: optional intermediate filters.
     """
     if num_units is None:
-        num_units = filters  # Se num_units non è specificato, usa filters.
+        num_units = filters 
 
     layers = [
         Squeeze(),
@@ -396,20 +364,7 @@ def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, laten
     ls
     return z_train, z_val ,labels_train, labels_val,posdir_decode_CL
     
-   # fig = plot_latents_3d(z, labels_position, discrete=False, show_legend=False, markersize=1, alpha=1, figsize=(7,7), title=title_pos)
-    #      fig.show()
-     #     plt.show(block=True)
-    
-    
-    
-    #title_dir=f"{name} - Direction.  temp={tau}, epochs={epochs}, filters={filters}"
-    #fig = plot_latents_3d(z, labels_direction, markersize=1, alpha=1, figsize=(7,7),title=title_dir)
-    
-    #fig.show()
-    #plt.show(block=True)
-    
-    
-    
+   
     
    #  if __name__ == "__main__":
     #    # #
