@@ -22,14 +22,19 @@ import os
 import sys
 from pathlib import Path
 import argparse
-
+i_dir=r'/media/zlollo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
+i_dir=r'J:\AI_PhD_Neuro_CNR\Empirics\GIT_stuff\AI_for_all\Contrastive_Stuff'
+os.chdir(i_dir)
 def setup_paths():
     """
    Dynamic path config
     """
-    # Trova la directory radice del progetto
-    project_root = Path.cwd()
-    #project_root = Path(__file__).resolve().parent  # Modifica se necessario
+   # If __file__ is not available, use the current working directory (cwd).
+    try:
+        project_root = Path(__file__).resolve().parent
+    except NameError:
+        project_root = Path(os.getcwd())  # Fallback to cwd if __file__ is not available
+    
 
     print(f"Project root is: {project_root}")
     # Percorso a "EEG-ANN-Pipeline"
@@ -49,7 +54,7 @@ def setup_paths():
     default_output_dir.mkdir(exist_ok=True)
 
     # Cambia la directory di lavoro alla radice del progetto
-    os.chdir(project_root)
+    #os.chdir(project_root)
 
     # Ritorna i percorsi configurati
     return project_root, eeg_pipeline_path, default_output_dir, default_input_dir
@@ -132,12 +137,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     args.name='achilles'
-    args.epochs=500
+    args.epochs=250
     args.tau=1
     args.filters=32
     #args.sigma_time=0.5
     #args.sigma_pos=0.5
     z_train, z_val ,labels_train, labels_val,posdir_decode_CL=main(args)
+    
 '''
      #parser.add_argument("--n_iter", type=int, default=10, help="Number of random search iterations")
      #         n_iter=args.n_iter,
@@ -197,5 +203,6 @@ if __name__ == "__main__":
      # find best result
     best_result = min(results, key=lambda x: x['pos_test_error'])
     print("Best result:", best_result)
+   
     '''
 

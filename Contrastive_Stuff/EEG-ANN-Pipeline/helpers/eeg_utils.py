@@ -23,6 +23,8 @@ def get_label_format(label):
         return 'string'
     elif (type(label) is float) or (type(label) is np.float64) or (type(label) is np.float32):
         return 'float'
+    elif isinstance(label, np.ndarray):
+        return 'ndarray'
     else:
         raise ValueError(f'Formato label {type(label)} non riconosciuto')
 

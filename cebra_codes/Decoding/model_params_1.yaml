@@ -7,7 +7,7 @@ cebra_time:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 1024
-    max_iterations: 100
+    max_iterations: 20000
     hybrid: False
     distance: 'cosine'
     verbose: True
@@ -24,7 +24,7 @@ cebra_behavior:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 1024
-    max_iterations: 100
+    max_iterations: 20000
     hybrid: False
     verbose: True
     time_offsets: 10

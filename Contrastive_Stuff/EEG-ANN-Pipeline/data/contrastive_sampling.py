@@ -144,35 +144,51 @@ class DataLoaderContrastive():
     
 
 # ---------------------------- My modified InfoNCE --------------------------- #
-class LabelsDistance():
+class LabelsDistance:
 
     def __init__(self, labels_distance_functions):
-
         if type(labels_distance_functions) is dict:
             self.multi_label = True
         else:
             self.multi_label = False
 
         self.labels_distance_functions = labels_distance_functions
-    
 
     def get_weights(self, labels):
     
         def pairwise_tensor_function(f, x):
-            x = x.view((-1,1))
+            x = x.view((-1, 1))
             return f(x, x.T)
         
         if self.multi_label:
             weights = []
-
+            
+            # Compute pairwise weights for each label
             for label_name in labels:
-                weights.append( pairwise_tensor_function(
-                                self.labels_distance_functions[label_name],
-                                labels[label_name]))
-                            
-            return torch.stack(weights, dim=-1)
+                weight = pairwise_tensor_function(
+                    self.labels_distance_functions[label_name],
+                    labels[label_name]
+                )
+                print(f"Weight for label '{label_name}': Shape {weight.shape}")
+                weights.append(weight)
+            
+            # Find the maximum shape
+            max_shape = max(weight.shape for weight in weights)
+            
+            # Pad each weight to the maximum shape
+            weights_padded = [
+                torch.nn.functional.pad(
+                    weight, 
+                    (0, max_shape[1] - weight.shape[1], 0, max_shape[0] - weight.shape[0])
+                )
+                for weight in weights
+            ]
+            
+            # Stack padded weights
+            return torch.stack(weights_padded, dim=-1)
+        
         else:
             batch_size = len(labels)
-            return pairwise_tensor_function(self.labels_distance_functions, labels).view((batch_size,batch_size,1))
-        
-
+            return pairwise_tensor_function(
+                self.labels_distance_functions, labels
+            ).view((batch_size, batch_size, 1))

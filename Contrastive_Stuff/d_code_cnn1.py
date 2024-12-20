@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 # 
-from some_functions import plot_embs
+from some_functions import plot_embs, explore_obj
 from data import LabelsDistance, TrialEEG, DatasetEEG, DatasetEEGTorch
 from data.preprocessing import normalize_signals
 from models import EncoderContrastiveWeights
@@ -106,6 +106,7 @@ def create_windows(dataset, window, shift, chns):
 
     trials_new = []
     for trial in dataset.trials:
+        #print(trial)
         signals = trial.eeg_signals[:chns, :]
         position_label = trial.eeg_signals[chns, :]
         direction_label = trial.eeg_signals[chns + 1, :]
@@ -116,14 +117,44 @@ def create_windows(dataset, window, shift, chns):
             ind_min = ind_center - window // 2
             ind_max = ind_center + window // 2
             x = signals[:, ind_min:ind_max]
-            label_full = {'Position': position_label[ind_max], 'Direction': int(
-                direction_label[ind_max])}
+            label_full = {'Position': position_label[ind_center], 
+                          'Direction': int(direction_label[ind_center])}
             trials_new.append(TrialEEG(x, label_full, times[ind_min:ind_max]))
             ind_center += shift
-
+            print(f"Position label shape: {position_label.shape}")
+            #print(f"Direction label type: {type(direction_label)}")
+   # return trials_new
     return DatasetEEG(trials_new, info=dataset.info)
 
+# Convert to PyTorch datasets
 
+# Build and train the model
+model = EncoderContrastiveWeights(
+    layers=build_model(filters, dropout, latents, ww, chns, normalize=True),
+    labels_distance=labels_distance,
+    labels_weights=[1, 1],
+    temperature=tau,
+    train_temperature=True
+)
+model.to(device)
+print("Training dataset size:", len(dataset_training.trials))
+print("Validation dataset size:", len(dataset_validation.trials))
+print("Model architecture:", model)
+print(f"Model has {count_model_parameters(model)} parameters.")
+print(f"rat name is {name}")
+print(f"{device}")
+
+# Train and evaluate the model
+optimizer = torch.optim.Adam(model.parameters(), lr=l_rate)
+metrics = train_model(model, optimizer, dataloader, epochs=epochs,
+                      dataloader_validation=dataloader_validation)
+
+
+# Save metrics and model
+#torch.save(model.state_dict(), f"{output_dir}/{name}_model.pth")
+#np.save(f"{output_dir}/{name}_metrics.npy", metrics)
+#plt.figure()
+plot_training_metrics(metrics)
 # Build the model encoder.
 def build_model(filters, dropout, latents, num_timepoints, chns, num_units=None, groups=1,normalize=True):
     """
@@ -245,25 +276,30 @@ def decoding_knn(embedding_train, embedding_test, label_train, label_test,metric
     return test_score, pos_test_err,pos_test_err_perc, pos_test_score
 
 
-def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, latents, ww, sigma_pos, sigma_time, train_split, valid_split, l_rate, batch_size, fs, shift,normalize, neighbors):
+#def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, latents, ww, sigma_pos, sigma_time, train_split, valid_split, l_rate, batch_size, fs, shift,normalize, neighbors):
     # load data
-# name = 'gatsby'
-# fs = 40
-# valid_split = 0.1
-# ww = 10
-# shift = 1
-# dropout = 0.5
-# tau = 0.02
-# filters = 32
-# latents = 3
-# l_rate = 0.0001
-# epochs = 250
-# sigma_pos = 0.016
-# sigma_time = 0.025
-# batch_size=512
-# num_units = filters
+name = 'gatsby'
+fs = 40
+valid_split = 0.1
+ww = 10
+shift = 1
+dropout = 0.5
+tau = 0.02
+filters = 32
+latents = 3
+l_rate = 0.0001
+epochs = 250
+sigma_pos = 0.016
+sigma_time = 0.025
+batch_size=512
+num_units = filters
+input_dir=default_input_dir
+output_dir=default_output_dir
+window=ww
     data = load_data(input_dir, name)
     chns = data['spikes'].shape[1]
+    
+    
 # # print(data['spikes'].shape)
 # # print(data['position'].shape)
 # print(chns)
@@ -305,9 +341,14 @@ def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, laten
     dataset_validation_pytorch.to_device(device)
     
     dataloader = DataLoader(dataset_pytorch, batch_size=512, shuffle=True)
+    for batch in dataloader:
+      #print(type(batch))  # Stampa il tipo (list, dict, tensor, ecc.)
+      print(batch)        # Stampa il contenuto
+      break 
+      
     dataloader_validation = DataLoader(
         dataset_validation_pytorch, batch_size=512, shuffle=False)
-    
+    explore_obj(dataset_pytorch)
     # Define label distances
     labels_distance = LabelsDistance(labels_distance_functions={
         'Position': lambda l1, l2: position_distance(l1, l2, sigma_pos),
@@ -317,7 +358,7 @@ def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, laten
     
     # Build and train the model
     model = EncoderContrastiveWeights(
-        layers=build_model(filters, dropout, latents, ww, chns, normalize=normalize),
+        layers=build_model(filters, dropout, latents, ww, chns, normalize=True),
         labels_distance=labels_distance,
         labels_weights=[1, 1],
         temperature=tau,
@@ -361,7 +402,7 @@ def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, laten
     #n_n=25
     metrics='cosine'
     posdir_decode_CL = decoding_knn(z_train, z_val, labels_train, labels_val,metrics, neighbors)
-    ls
+
     return z_train, z_val ,labels_train, labels_val,posdir_decode_CL
     
    

@@ -220,6 +220,8 @@ def load_params(params_path):
 
 ##################### PLOTS
 
+##### rat_hippocampus
+
 def plot_embs(emb,label, title):
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(111, projection="3d")
@@ -234,7 +236,7 @@ def plot_embs(emb,label, title):
         ax.scatter(emb[l, 0], emb[l, 1], emb[l, 2], c=label[l, 0], cmap=cmap1, norm=norm, s=1, label='Left')
         ax.scatter(emb[r, 0], emb[r, 1], emb[r, 2], c=label[r, 0], cmap=cmap2, norm=norm, s=1, label='Right')
             
-        ax.axis("on")
+        ax.axis("off")
         plt.title(title)
 
         sm_l = plt.cm.ScalarMappable(cmap=cmap1, norm=norm)
@@ -258,7 +260,70 @@ def plot_embs(emb,label, title):
         #lt.legend()
         plt.show() 
 
-        #### knn decoder
+def plot_embs_continuous(emb, label, title):
+    fig = plt.figure(figsize=(12, 5))
+    #plt.suptitle('CEBRA-behavior trained with position label',
+              #   fontsize=20)
+    ax = plt.subplot(121, projection = '3d')
+    ax.set_title('x', fontsize=20, y=0)
+    x = ax.scatter(emb[:, 0],
+                   emb[:, 1],
+                   emb[:, 2],
+                   c=label[:, 0],
+                   cmap='seismic',
+                   s=0.05,
+                   vmin=-15,
+                   vmax=15)
+    ax.axis('on')
+    ax = plt.subplot(122, projection = '3d')
+    y = ax.scatter(emb[:, 0],
+                   emb[:, 1],
+                   emb[:, 2],
+                   c=label[:, 1],
+                   cmap='seismic',
+                   s=0.05,
+                   vmin=-15,
+                   vmax=15)
+    ax.axis('on')
+    ax.set_title('y', fontsize=20, y=0)
+    yc = plt.colorbar(y, fraction=0.03, pad=0.05, ticks=np.linspace(-15, 15, 7))
+    yc.ax.tick_params(labelsize=15)
+    yc.ax.set_title("(cm)", fontsize=10)
+    plt.show()
+
+
+def plot_embs_discrete(emb, label, title):
+    fig = plt.figure(figsize=(4, 2), dpi=300)
+    #plt.suptitle('CEBRA-behavior trained with target label',
+               #  fontsize=5)
+    ax = plt.subplot(121, projection = '3d')
+    ax.set_title('All trials embedding', fontsize=5, y=-0.1)
+    x = ax.scatter(emb[:, 0],
+                   emb[:, 1],
+                   emb[:, 2],
+                   c=label,
+                   cmap=plt.cm.hsv,
+                   s=0.01)
+    ax.axis('on')
+
+    ax = plt.subplot(122,projection = '3d')
+    ax.set_title('direction-averaged embedding', fontsize=5, y=-0.1)
+    for i in range(8):
+        direction_trial = (label == i)
+        trial_avg = emb[direction_trial, :].reshape(-1, 600,
+                                                             3).mean(axis=0)
+        trial_avg_normed = trial_avg/np.linalg.norm(trial_avg, axis=1)[:,None]
+        ax.scatter(trial_avg_normed[:, 0],
+                   trial_avg_normed[:, 1],
+                   trial_avg_normed[:, 2],
+                   color=plt.cm.hsv(1 / 8 * i),
+                   s=0.01)
+    ax.axis('on')
+    plt.show()
+
+
+
+############################# KNN DECODER ####################################à
 
         
 def decoding_knn(embedding_train, embedding_test, label_train, label_test):
@@ -275,8 +340,46 @@ def decoding_knn(embedding_train, embedding_test, label_train, label_test):
 
    prediction = np.stack([pos_pred, dir_pred],axis = 1)
 
-   test_score = sklearn.metrics.r2_score(label_test[:,:2], prediction, multioutput='variance_weighted')
-   pos_test_err = np.median(abs(prediction[:,0] - label_test[:, 0]))
-   pos_test_score = sklearn.metrics.r2_score(label_test[:, 0], prediction[:,0])
+   test_score = sklearn.metrics.r2_score(
+   label_test[:, :2], prediction, multioutput='variance_weighted')
+   max_label = np.max(label_test[:, 0])
+   print(f'Max value of label_test[:, 0] is: {max_label}')
+    
+   pos_test_err_perc = np.median(abs(prediction[:, 0] - label_test[:, 0]) / max_label * 100)
+    
+   pos_test_err = np.median(abs(prediction[:, 0] - label_test[:, 0]))
+    
+   pos_test_score = sklearn.metrics.r2_score(
+        label_test[:, 0], prediction[:, 0])
 
-   return test_score, pos_test_err, pos_test_score
+   return test_score, pos_test_err,pos_test_err_perc, pos_test_score
+
+
+
+   ##### esplora contenuto oggetto ###3
+
+def explore_obj(obj):
+    """
+    Esplora un oggetto Python, elencando gli attributi e i loro valori.
+    
+    Args:
+        obj: Oggetto da esplorare.
+        
+    Output:
+        Stampa gli attributi e i loro valori.
+    """
+    print(f"Esplorazione dell'oggetto: {obj.__class__.__name__}")
+    print("-" * 50)
+    
+    for attr in dir(obj):
+        # Ignora gli attributi speciali (che iniziano e finiscono con __)
+        if not attr.startswith("__"):
+            try:
+                valore = getattr(obj, attr)
+                print(f"{attr}: {valore}")
+            except Exception as e:
+                print(f"{attr}: (non accessibile, errore: {e})")
+    print("-" * 50)
+
+# Esempio di utilizzo
+#esplora_oggetto(dataset_training)

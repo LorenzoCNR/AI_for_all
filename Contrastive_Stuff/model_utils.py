@@ -1,4 +1,4 @@
-import openTSNE
+#import openTSNE
 import umap
 import cebra
 from joblib import Parallel, delayed
@@ -65,6 +65,7 @@ def run_model(model_type, params, data_, subtrain=False):
     # Fit model and transform data
     if model_type in ['cebra_time', 'umap', 'tsne']:
         fitted_model = model.fit(X_train)
+        train_loss= fitted_model.state_dict_['loss']
         embeddings_train = fitted_model.transform(X_train)
         embeddings_valid = fitted_model.transform(X_valid)
         

@@ -52,7 +52,12 @@ class EncoderContrastiveWeights(BaseModel):
         psi.fill_diagonal_(-1e15)
 
         # Correggo i pesi per evitare di fare log(0) e ne prendo il logaritmo
-        weights_log = torch.log(1e-6 + weights)
+        weights_log = torch.log(1+ weights)
+        print(f"psi size is: {psi.shape}")
+        print(f"weights_log size is: {weights_log.shape}")
+        print(f"weights size is: {weights.shape}")
+        print(f"layers size is: {f_x.shape}")
+
 
         # Costruisco un tensore in cui considero anche i pesi
         psi_weighted = psi.view((*psi.shape, 1)) + weights_log

@@ -76,7 +76,20 @@ Sun, 31.03.24. Upload tsne and umap main and miscellanea to run them on matlab. 
 ....
 ....
 
-- Mon 02-12-24
+## WEEK 12 - 18/12/24
 
+### **Modified Module**: `eeg_dataset_torch` in `\EEG-ANN-Pipeline\data`
+
+#### **Changes**:
+- Added support for multidimensional labels (e.g., tensors with shapes like `(T, C, H, W)`).
+- The module now automatically handles:
+  - Single-label scenarios (e.g., scalars or 2D arrays).
+  - Multi-label datasets with heterogeneous labels (e.g., bidimensional positions `(x, y)` alongside discrete classes).
+
+#### **Known Limitations**:
+- The following types of data remain **unsupported**:
+  - `NoneType`: Labels that are undefined or empty.
+  - Unconverted strings: Text-based labels that haven't been converted to numerical representations.
+  - Personal (complex) objects: Custom objects or data structures that are not standard numerical or tensor formats.
 
 

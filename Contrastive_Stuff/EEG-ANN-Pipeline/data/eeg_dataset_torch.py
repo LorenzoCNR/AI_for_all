@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from data import DatasetEEG
 from torch.utils.data import Dataset
 from helpers.eeg_utils import convert_labels_string_to_int
@@ -8,7 +9,7 @@ class DatasetEEGTorch(Dataset):
 
     def __init__(self, dataset: DatasetEEG):
         
-        # Controllo che i trials siano tutti della stessa lunghezza
+        # Controllo cohe i trials siano tutti della stessa lunghezza
         # altrimenti non posso creare il dataset pytorch
         if not isinstance(dataset.num_timepoints, int):
             raise ValueError('I trial non hanno tutti la stessa lunghezza')
@@ -69,20 +70,33 @@ class DatasetEEGTorch(Dataset):
                 labels, labels_int_to_str = convert_labels_string_to_int(labels)
                 self.labels_int_to_str = labels_int_to_str
 
-            # Trasformo le label in un tensore e le salvo
-            self.labels = torch.LongTensor(labels)
-            
-        else:
+        # Se le label sono array (es. coordinate bidimensionali o più dimensioni)
+            if isinstance(labels[0], (list, np.ndarray)):
+                #if np.array(labels).ndim == 2:  # Bidimensionale (es. coordinate x, y)
+                if np.array(labels).ndim in (1, 2): 
+                    self.labels = torch.FloatTensor(np.array(labels))
+                elif np.array(labels).ndim > 2:  # Multi-dimensionale (es. mappe 3D)
+                    self.labels = torch.FloatTensor(np.array(labels))
+                else:
+                    raise ValueError(f"Label single-label ha una forma non gestita: {np.array(labels).shape}")
+                   # Se le label sono intere (scalari)
+            elif isinstance(labels[0], (int, np.integer)):  # Label scalare
+                self.labels = torch.LongTensor(labels)
+            else:
+                raise ValueError(f"Formato delle label non supportato: {type(labels[0])}")
+                
 
             # Nel caso multilabel produco un tensore per ogni tipo di variabile
             # e poi li metto in un dizionario
+            # Ottieni i nomi delle label multi-label (es. 'Position', 'Direction')
+        else:
             self.label_names = list(self.dataset_original.trials[0].label.keys())
 
             # Dizionario in cui mettere le label convertite
-            labels = dict()
+            labels = {}
 
             # Dizionario in cui mettere i vari dizionari per la conversione da int a str (se multipli)
-            labels_int_to_str = dict()
+            labels_int_to_str ={}
             
             # Ciclo su ogni tipo di label nella lista
             for label_name in self.label_names:
@@ -96,28 +110,41 @@ class DatasetEEGTorch(Dataset):
                     labels_i, labels_int_to_str_i = convert_labels_string_to_int(labels_i)
                     labels_int_to_str[label_name] = labels_int_to_str_i
 
-                # Converto in base anche al tipo di dato
-                if self.labels_format[label_name] == 'float':
-                    labels_i = torch.FloatTensor(labels_i)
-                else:
-                    labels_i = torch.LongTensor(labels_i)
+                 # Se sono array bidimensionali o multi-dimensionali
+                if isinstance(labels_i[0], (list, np.ndarray)):
+                    if np.array(labels_i).ndim == 2: ### bidim
+                        labels[label_name] = torch.FloatTensor(np.array(labels_i))
+                    elif np.array(labels_i).ndim > 2: # multidim
+                       labels[label_name] = torch.FloatTensor(np.array(labels_i))
+                    else:
+                        raise ValueError(f"Label '{label_name}' ha una forma non gestita: {np.array(labels_i).shape}")
 
-                # Le salvo nel dizionario globale
-                labels[label_name] = labels_i
+                # Se sono intere (scalari)
+                elif isinstance(labels_i[0], (int, np.integer)):
+                     labels[label_name] = torch.LongTensor(labels_i)  # Interi
+
+                ## Le salvo nel dizionario globale
+               # labels[label_name] = labels_i
             
             # Salvo le label nella classe
             self.labels = labels
 
             # Salvo il dizionario di conversione se non è vuoto
             if len(labels_int_to_str) > 0:
-                self.labels_int_to_str = labels_int_to_str            
+                self.labels_int_to_str = labels_int_to_str   
 
+            #print(f"Labels (Position): Shape: {self.labels['Position'].shape}")
+            #print(f"Labels (Direction): Shape: {self.labels['Direction'].shape}")
     def to_device(self, device):
+
+        # Controllo se labels è stato inizializzato
+        if not hasattr(self, 'labels'):
+            raise AttributeError("L'attributo 'labels' non è stato inizializzato. Verifica che 'create_labels' sia stato chiamato correttamente.")
 
         # Sposto i dati sul device
         self.eeg_signals = self.eeg_signals.to(device)
 
-        # Sposto le label sul device, tenendo conto dei possibili casi
+        # Sposto le label sul device
         if self.labels_type == 'single_label':
             self.labels = self.labels.to(device)
         else:
