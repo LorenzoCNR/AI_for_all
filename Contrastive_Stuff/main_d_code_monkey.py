@@ -21,49 +21,111 @@
 import os
 import sys
 from pathlib import Path
-import argparse
-i_dir=r'/media/zlollo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
-#i_dir=r'J:\AI_PhD_Neuro_CNR\Empirics\GIT_stuff\AI_for_all\Contrastive_Stuff'
+import scipy.io
+### directory su windows
+i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
+
+## directories su ubuntu
+#i_dir=r'/media/zlollo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
+
 os.chdir(i_dir)
-def setup_paths():
+os.getcwd()
+
+import argparse
+import logging
+
+############### funzione per ottenere ed impostare i percorsi
+#### just notice that some folders are case specific (i.e. monkey data folder)
+# Set up a logger
+
+def setup_paths(change_dir=False):
     """
-   Dynamic path config
+    Dynamically configure paths for the project.
+    
+    Args:
+        change_dir (bool): If True, changes the current working 
+        directory to the project root.
+    
+    Returns:
+        tuple: project_root, eeg_pipeline_path, default_output_dir,
+        default_input_dir
     """
-   # If __file__ is not available, use the current working directory (cwd).
+    # Setup logger
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    # Determine the project root dynamically
     try:
         project_root = Path(__file__).resolve().parent
     except NameError:
         project_root = Path(os.getcwd())  # Fallback to cwd if __file__ is not available
-    
 
-    print(f"Project root is: {project_root}")
-    # Percorso a "EEG-ANN-Pipeline"
+    logger.info(f"Project root resolved to: {project_root}")
+
+    # Define important paths
     eeg_pipeline_path = project_root / "EEG-ANN-Pipeline"
-    print(f"Oath to eeg-ann-pipeline': {eeg_pipeline_path}")
-    default_input_dir= project_root.parent/ "data" / "monkey_reaching_preload_smth_40"
-    print(f"data_path: {default_input_dir}")
-    # Percorso alla directory "contrastive_output" (output directory)
-    default_output_dir = project_root / "contrastive_output"
-    print(f"ouptut path: {default_output_dir}")
+    logger.info(f"Path to 'EEG-ANN-Pipeline': {eeg_pipeline_path}")
 
-    # Aggiungi "EEG-ANN-Pipeline" al path
+    default_input_dir = project_root.parent / "data" / "monkey_reaching_preload_smth_40"
+    logger.info(f"Input data path: {default_input_dir}")
+
+    default_output_dir = project_root / "contrastive_output"
+    logger.info(f"Output path: {default_output_dir}")
+
+    # Add "EEG-ANN-Pipeline" to sys.path
     if str(eeg_pipeline_path) not in sys.path:
         sys.path.append(str(eeg_pipeline_path))
+        logger.info(f"Added '{eeg_pipeline_path}' to sys.path")
 
-    # Crea la directory di output se non esiste
+    # Create output directory if it doesn't exist
     default_output_dir.mkdir(exist_ok=True)
+    logger.info(f"Output directory ensured: {default_output_dir}")
 
-    # Cambia la directory di lavoro alla radice del progetto
-    #os.chdir(project_root)
+    # Optionally change the working directory
+    if change_dir:
+        os.chdir(project_root)
+        logger.info(f"Working directory changed to: {project_root}")
 
-    # Ritorna i percorsi configurati
     return project_root, eeg_pipeline_path, default_output_dir, default_input_dir
 
 
 
 
-#project_root, eeg_pipeline_path, default_output_dir, default_input_dir = setup_paths()
-#from d_code_cnn1 import run_d_code  # Importa lo script principale
+# def setup_paths():
+#     """
+#    Dynamic path config
+#     """
+#    # If __file__ is not available, use the current working directory (cwd).
+#     try:
+#         project_root = Path(__file__).resolve().parent
+#     except NameError:
+#         project_root = Path(os.getcwd())  # Fallback to cwd if __file__ is not available
+    
+
+#     print(f"Project root is: {project_root}")
+#     # Percorso a "EEG-ANN-Pipeline"
+#     eeg_pipeline_path = project_root / "EEG-ANN-Pipeline"
+#     print(f"Oath to eeg-ann-pipeline': {eeg_pipeline_path}")
+#     default_input_dir= project_root.parent/ "data" / "monkey_reaching_preload_smth_40"
+#     print(f"data_path: {default_input_dir}")
+#     # Percorso alla directory "contrastive_output" (output directory)
+#     default_output_dir = project_root / "contrastive_output"
+#     print(f"ouptut path: {default_output_dir}")
+
+#     # Aggiungi "EEG-ANN-Pipeline" al path
+#     if str(eeg_pipeline_path) not in sys.path:
+#         sys.path.append(str(eeg_pipeline_path))
+
+#     # Crea la directory di output se non esiste
+#     default_output_dir.mkdir(exist_ok=True)
+
+#     # Cambia la directory di lavoro alla radice del progetto
+#     #os.chdir(project_root)
+
+#     # Ritorna i percorsi configurati
+#     return project_root, eeg_pipeline_path, default_output_dir, default_input_dir
+
+project_root, eeg_pipeline_path, default_output_dir, default_input_dir = setup_paths(change_dir=False)
 
 
 

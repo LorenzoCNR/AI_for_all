@@ -10,24 +10,34 @@ from helpers.eeg_utils import check_number_timepoints, check_labels_type
 # essere ampliata in modo da contenere ulteriori informazioni.
 class TrialEEG:
 
-    def __init__(self, eeg_signals, label, timepoints):
-
+    def __init__(self, eeg_signals, labels, timepoints):
+        """
+        Args:
+            eeg_signals (array-like): Matrice EEG (num_channels x num_timepoints).
+            labels (list of tuples): Lista di tuple (nome_etichetta, array_etichetta).
+            timepoints (array-like): Timepoints associati ai dati EEG.
+        """
         self.eeg_signals = np.array(eeg_signals, dtype=np.float32)
-        self.label = label
+        # Dizionario con nomi e etichette
+        self.labels = {name: np.array(label, dtype=np.float32) for name, label in labels} 
         self.num_channels, self.num_timepoints = self.eeg_signals.shape
         self.timepoints = np.array(timepoints, dtype=np.float32)
 
     def __str__(self):
-        info_string = f'Numero canali = {self.num_channels}, numero timepoints = {self.num_timepoints}\n'
-        if self.timepoints is not None:
-            info_string += f'Istante iniziale = {self.timepoints[0]}, tempo finale = {self.timepoints[-1]}'
-        return info_string
+        """
+        Stringa di descrizione dell'oggetto TrialEEG.
+        """
+        labels_info = "\n".join([f"  {key}: shape {value.shape}" for key, value in self.labels.items()])
+        return (f'Numero canali = {self.num_channels}, numero timepoints = {self.num_timepoints}\n'
+                f'Istante iniziale = {self.timepoints[0]}, tempo finale = {self.timepoints[-1]}\n'
+                f'Labels:\n{labels_info}')
 
     def plot(self, split_channels=True):
 
         if split_channels:
 
             # Mostro i segnali uno sotto l'altro
+            
             # La separazione è pari a 4 deviazioni standard in modo che non si sovrappongano
             std = np.std(self.eeg_signals)
             tick_pos = []
@@ -71,8 +81,13 @@ class DatasetEEG():
         self.num_trials = len(trials)
         self.num_channels = trials[0].eeg_signals.shape[0]
         self.num_timepoints = check_number_timepoints(trials)
-        self.labels_type, self.labels_format = check_labels_type(trials)
+            # Calcola il numero minimo e massimo di timepoints tra i trial
+        self.min_timepoints = min(trial.num_timepoints for trial in trials)
+        self.max_timepoints = max(trial.num_timepoints for trial in trials)
 
+        # Controlla tipo e formato delle etichette
+        self.labels_type, self.labels_format = check_labels_type(trials)
+        #print(self.labels_type, self.labels_format)
     
     # Funzione per salvare il dataset su file (per ora con pickle, in futuro con altri formati)
     def save(self, filepath):
@@ -89,15 +104,34 @@ class DatasetEEG():
     # Mostro le info del dataset quando chiamo "print" su di esso
     def __str__(self):
         info_string = f"{'num_trials':25}:  {self.num_trials}\n"
-        info_string += f"{'num_channels':25}:  {self.num_channels}\n"
-        info_string += f"{'num_timepoints':25}:  {self.num_timepoints}\n"
+        info_string += f"{'num_channels (per trial)':25}:  {self.num_channels}\n"
+
+        # Rendi sempre esplicito che si tratta di timepoints per trial
+        if self.min_timepoints == self.max_timepoints:
+            info_string += f"{'timepoints (per trial)':25}:  {self.min_timepoints} (fix)\n"
+        else:
+            info_string += f"{'timepoints (per trial)':25}:  Min {self.min_timepoints}, Max {self.max_timepoints}\n"
+
         info_string += f"{'labels_type':25}:  {self.labels_type}\n"
         info_string += f"{'labels_format':25}:  {self.labels_format}\n"
-
+        print(f"Labels type in __str__: {self.labels_type}")
         if self.info:
             for key in self.info:
                 info_string += f'{key:<25}:  {self.info[key]}\n'
         return info_string
+    #def __str__(self):
+        #info_string = f"{'num_trials':25}:  {self.num_trials}\n"
+        #info_string += f"{'num_channels':25}:  {self.num_channels}\n"
+        #info_string += f"{'num_timepoints':25}:  {self.num_timepoints}\n"
+        #info_string += f"{'labels_type':25}:  {sDelf.labels_type}\n"
+        #info_string += f"{'labels_format':25}:  {self.labels_format}\n"
+
+        #if self.info:
+        #    for key in self.info:
+       #         info_string += f'{key:<25}:  {self.info[key]}\n'
+       # return info_string
+       
+   
 
     # Estrae un subset di trial e crea un nuovo dataset a partire da questi
     def extract_subset(self, idx):
@@ -121,3 +155,45 @@ class DatasetEEG():
         dataset_validation = self.extract_subset(validation_indices)
 
         return dataset_train, dataset_validation
+    
+    # puoi pensar di metterci un decoratore
+    # @staticmethod
+    def create_windows(self, window, shift):
+       """
+       Crea finestre temporali dai dati EEG del dataset.
+
+       Args:
+           window (int): Dimensione della finestra temporale (numero di timepoints).
+           shift (int): Scostamento tra finestre consecutive.
+
+       Returns:
+           DatasetEEG: Nuovo dataset contenente finestre temporali.
+       """
+       trials_new = []
+
+       for trial in self.trials:
+           signals = trial.eeg_signals
+           times = trial.timepoints
+           labels = trial.labels  # Dizionario delle etichette
+
+           ind_center = window // 2
+           while ind_center + window // 2 < len(times):
+               ind_min = ind_center - window // 2
+               ind_max = ind_center + window // 2
+
+               # Estrai finestra dai segnali
+               x = signals[:, ind_min:ind_max]
+
+               # Estrai le etichette per il centro della finestra
+               window_labels = {
+                      key: value[ind_center] if value.ndim == 1 else value[:, ind_center]
+                      for key, value in labels.items()
+                      }
+
+               # Crea un nuovo trial con la finestra
+               trials_new.append(TrialEEG(x, list(window_labels.items()), times[ind_min:ind_max]))
+
+               # Aggiorna il centro della finestra
+               ind_center += shift
+
+       return DatasetEEG(trials_new, info=self.info)

@@ -29,20 +29,46 @@ def get_label_format(label):
         raise ValueError(f'Formato label {type(label)} non riconosciuto')
 
 
-def check_labels_type(trials):
+#def check_labels_type(trials):
 
     # Capisco se è singola o multilabel
-    if type(trials[0].label) is dict:
+#    if type(trials[0].label) is dict:
 
-        labels_type = 'multi_label'
-        labels_format = dict()
+#        labels_type = 'multi_label'
+ #       labels_format = dict()
 
-        for key in trials[0].label:
-            labels_format[key] = get_label_format(trials[0].label[key])
+#        for key in trials[0].label:
+#            labels_format[key] = get_label_format(trials[0].label[key])
+#
+ #   else:
+#        labels_type = 'single_label'
+  #      labels_format = get_label_format(trials[0].label)
+#
+ #   return labels_type, labels_format
 
-    else:
-        labels_type = 'single_label'
-        labels_format = get_label_format(trials[0].label)
+def check_labels_type(trials):
+    """
+    Determina il tipo di etichette (single o multi-label) e il formato delle etichette.
+
+    Args:
+        trials (list): Lista di oggetti TrialEEG.
+
+    Returns:
+        tuple: (labels_type, labels_format)
+    """
+    # Ottieni la label del primo trial
+    first_label = trials[0].labels
+
+    if isinstance(first_label, dict):  # Controlla se è un dizionario
+            if len(first_label) == 1:  # Una sola chiave, considerata single_label
+                labels_type = 'single_label'
+                labels_format = {list(first_label.keys())[0]: get_label_format(list(first_label.values())[0])}
+            else:  # Più chiavi, considerata multi_label
+                labels_type = 'multi_label'
+                labels_format = {key: get_label_format(value) for key, value in first_label.items()}
+    else:  # Non è un dizionario, considerata single_label
+            labels_type = 'single_label'
+            labels_format = get_label_format(first_label)
 
     return labels_type, labels_format
 

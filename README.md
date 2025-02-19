@@ -23,7 +23,7 @@ Data format and content
 - neural data (spikes_active) are  EEG recordings (continuous) cast in a  2D matrix of size  Time*Channels (115800 bins x 65)...
     monkey_pos.neural.numpy()
     monkey_target.neural.numpy()
-- Active movement (pos_active) is the arm position during the task a 2D matrix of size Time*coordinates (115800 bins x 2)     
+- Behavioural data - Active movement - (pos_active) is the arm position during the task; a 2D matrix of size Time*coordinates (115800 bins x 2)     
     monkey_pos.continuous_index.numpy()
 - Active_target is the arm direction a Time*1 vector with labels 0-7 (8 directions)
     monkey_target.discrete_index.numpy()

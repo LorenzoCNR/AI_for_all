@@ -16,6 +16,8 @@ DA FARE
 mettere nel file params o in parser, la metrica per il decoding e il numero di vicini
 raffianre il decoding con scelta di k ottimale
 
+percorso per slavare dati risultati e figure (in model utils anche)
+pivae
 
 
 '''
@@ -23,10 +25,11 @@ raffianre il decoding con scelta di k ottimale
 
 ############################### METTERE LE PROPRIE DIRECTORIES!!!!!! #######################################
 ### directory su windows
-i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
+#i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
 
 ## directories su ubuntu
-#i_dir=r'/media/lorenzo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
+i_dir=r'/media/lorenzo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
+
 
 ####sample notebook.
 '''
@@ -37,6 +40,8 @@ import sys
 from pathlib import Path
 
 os.chdir(i_dir)
+os.getcwd()
+
 def setup_paths():
     """
    Dynamic path config
@@ -82,6 +87,8 @@ from matplotlib import pyplot as plt
 from torch import nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import ParameterGrid, train_test_split
+from sklearn.model_selection import ParameterGrid, ParameterSampler, RandomizedSearchCV
+
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 import sklearn.metrics
 from scipy import stats
@@ -114,15 +121,28 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = True
 
 
-def process_data(data_split, param_list, fixed_params, model_type):
+def process_data(data_split, param_list, fixed_params, model_type, train_data,
+                 transform_data):
     """
-    Processa i dati e esegue il modello utilizzando la funzione run_model
+    Process data and run the model through run_model function.
+   
+   Parameters:
+       data_split (dict): Dataset split into train, validation, etc.
+       param_list (list): List of parameter combinations to test.
+       fixed_params (dict): Fixed parameters for the model.
+       model_type (str): Type of model to use.
+       train_data (list): Keys for training data.
+       transform_data (list): Keys for transformation data.
+
+   Returns:
+       dict: Embedding results for each parameter configuration.
+
     """
     
-    #embedding_results = {} 
+    embedding_results = {} 
     
     for p in param_list:
-        print(f"\nEsecuzione del modello {model_type} con parametri: {p}")
+        print(f"\n run model {model_type} with parameters: {p}")
         model_params = {**fixed_params, **p}
 
         # Esegui `run_model` con i dati di input e i parametri specifici
@@ -130,27 +150,38 @@ def process_data(data_split, param_list, fixed_params, model_type):
             model_type=model_type,
             params=model_params,
             data_=data_split,
-            subtrain=('_subtrain' in data_split)
-        )
+            train_data=train_data,
+            transform_data=transform_data,
+            save_results=False
+            
+                )
 
-        if results[0] is None:
+        if not results:
             continue
 
-        embeddings_train, embeddings_valid, embeddings_sub_train, fitted_model, y_train, y_valid, y_sub_train, X_sub_train,train_loss = results
+
+        embedding_results[f"{model_type}_{str(p)}"] = {
+            "model_params": model_params,
+            **results
+        }
+
+    return embedding_results, data_split, temp, max_iters
+
+       # embeddings_train, embeddings_valid, embeddings_sub_train, fitted_model, y_train, y_valid, y_sub_train, X_sub_train,train_loss = results
         # Uti
         
-        key = f"{model_type}_{str(p)}"
+        #key = f"{model_type}_{str(p)}"
         
-        embedding_results={
-            'model_type':model_type,
-             'model_params':model_params,
-             'embeddings_train':embeddings_train,
-             'embeddings_valid':embeddings_valid,
-             'embeddings_subtrain':embeddings_sub_train,
-             'train_loss': train_loss}
+        # embedding_results={
+        #     'model_type':model_type,
+        #      'model_params':model_params,
+        #      'embeddings_train':embeddings_train,
+        #      'embeddings_valid':embeddings_valid,
+        #      'embeddings_subtrain':embeddings_sub_train,
+        #      'train_loss': train_loss}
         
-        temp= model_params.get('temperature', 'N/A')
-        max_iters = model_params.get('max_iterations', 'N/A')
+        # temp= model_params.get('temperature', 'N/A')
+        # max_iters = model_params.get('max_iterations', 'N/A')
 
         #if isinstance(train_loss, torch.Tensor):
        #     last_train_loss = train_loss.item()
@@ -163,9 +194,9 @@ def process_data(data_split, param_list, fixed_params, model_type):
   #sappend((model_type, model_params,embeddings_train, embeddings_valid, embeddings_sub_train))
 
         
-    return embedding_results, data_split, temp, max_iters
 
-def run_pipeline(input_dir, output_dir, name, param_file, model_type, use_grid, case, train_ratio, val_ratio):
+def run_pipeline(input_dir, output_dir, name, param_file, model_type,use_grid,
+                 case, train_ratio, val_ratio, mode, train_data, transform_data):
     #name='achilles'
     path = Path(input_dir) / f"{name}.jl"
     data = jl.load(path)
@@ -195,7 +226,11 @@ def run_pipeline(input_dir, output_dir, name, param_file, model_type, use_grid, 
     
     #data_split = split_data_trials(data, case=case, train_ratio=train_ratio, val_ratio=val_ratio, shuffle=False, seed=42, verbose=True)    
     data_split = split_data_trials(data, case=case, train_ratio=train_ratio, val_ratio=val_ratio, shuffle=False, seed=42, verbose=True)
-    print("Chiavi in data_split:", data_split.keys())
+    #data_split = split_data_trials(data, case=case, train_ratio=train_ratio, val_ratio=val_ratio, shuffle=True, seed=42)
+
+    print("keys in data_split:", data_split.keys())
+    
+    
     params_path = Path(project_root) / param_file
     params = load_params(params_path)
     fixed_params = params[model_type]['fixed']
@@ -203,12 +238,24 @@ def run_pipeline(input_dir, output_dir, name, param_file, model_type, use_grid, 
     #batch_size = fixed_params.get('batch_size', 32)
 
     # paramete list
-    if use_grid:
-       param_list = list(ParameterGrid(grid_params))
+    # if use_grid:
+    #    param_list = list(ParameterGrid(grid_params))
+    # else:
+    #    param_list = [{**fixed_params, **{k: v[0] for k, v in grid_params.items()}}]
+    # # Step 6: Processa data and get embeddings
+    if mode == "fixed":
+        param_list = [{**fixed_params}]
+    elif mode == "grid_search":
+        param_list = list(ParameterGrid(grid_params))
+    elif mode == "random_search":
+        random_search = ParameterSampler(grid_params, n_iter=10, random_state=42)
+        param_list = list(random_search)
     else:
-       param_list = [{**fixed_params, **{k: v[0] for k, v in grid_params.items()}}]
-    # Step 6: Processa i dati e ottieni le embedding
-    
+        raise ValueError("Invalid mode. Choose 'fixed', 'grid_search', or 'random_search'.")
+
+    # Process data
+    embedding_results = process_data(data_split, param_list, fixed_params, model_type, train_data, transform_data)
+
     
     results_dict={}
 
@@ -224,32 +271,49 @@ def run_pipeline(input_dir, output_dir, name, param_file, model_type, use_grid, 
         embedding_results, data_split, temp, max_iters = process_data(data_split, [params], fixed_params, model_type)
         #embedding_results, data_split, temp, max_iters=process_data(data_split, param_list, fixed_params, model_type)
         
-        z_train=embedding_results['embeddings_train']
-        z_val=embedding_results['embeddings_valid']
+        # z_train=embedding_results['embeddings_train']
+        # z_val=embedding_results['embeddings_valid']
         
-        labels_train=data_split['y_train']
-        labels_val=data_split['y_val']
+        # labels_train=data_split['y_train']
+        # labels_val=data_split['y_val']
         
-        posdir_decode_CEBRA = decoding_knn(z_train, z_val, labels_train, labels_val)
+        # posdir_decode_CEBRA = decoding_knn(z_train, z_val, labels_train, labels_val)
     
         
-        ### save results ###
+        # ### save results ###
        
-        results_dict[param_key] = {
-            "params": params,
-            "test_score": posdir_decode_CEBRA[0],
-            "pos_test_error": posdir_decode_CEBRA[1],
-            "pos_test_error %": posdir_decode_CEBRA[2],            
-            "pos_test_score": posdir_decode_CEBRA[3],
-            "embedding_results": embedding_results
-        }
+        # results_dict[param_key] = {
+        #     "params": params,
+        #     "test_score": posdir_decode_CEBRA[0],
+        #     "pos_test_error": posdir_decode_CEBRA[1],
+        #     "pos_test_error %": posdir_decode_CEBRA[2],            
+        #     "pos_test_score": posdir_decode_CEBRA[3],
+        #     "embedding_results": embedding_results
+        # }
         
-        print('test_score is', posdir_decode_CEBRA[0])
-        print('pos test error is', posdir_decode_CEBRA[1])
-        print(f'pos test error - percent - is {posdir_decode_CEBRA[2]:.2f}%')
-        print('pos test score is', posdir_decode_CEBRA[3])
+        # print('test_score is', posdir_decode_CEBRA[0])
+        # print('pos test error is', posdir_decode_CEBRA[1])
+        # print(f'pos test error - percent - is {posdir_decode_CEBRA[2]:.2f}%')
+        # print('pos test score is', posdir_decode_CEBRA[3])
     
-        
+        # Decoding with KNN
+        results_dict = {}
+        for config, results in embedding_results.items():
+          z_train = results[f"embeddings_{train_data[0]}"]
+          z_val = results[f"embeddings_{transform_data[0]}"]
+          labels_train = data_split[train_data[1]]
+          labels_val = data_split[transform_data[1]]
+    
+          knn_results = decoding_knn(z_train, z_val, labels_train, labels_val)
+
+          results_dict[config] = {
+              "params": results["model_params"],
+              "test_score": knn_results[0],
+              "pos_test_error": knn_results[1],
+              "pos_test_error_perc": knn_results[2],
+              "pos_test_score": knn_results[3],
+          }
+
         #temperature = fixed_params.get('temperature', 'N/A')
         #max_iters = grid_params.get('max_iterations', 'N/A')
         title = f"{model_type} - {name} Train Embeddings | Temp={temp} | Iterations={max_iters}"
@@ -278,6 +342,8 @@ if __name__ == "__main__":
     
 
     parser = argparse.ArgumentParser(description='Esegui la pipeline di elaborazione dati e embedding.')
+    parser.add_argument("--mode", type=str, choices=["split", "train", "transform", "knn", "full"],
+                        default="full", help="Modalità di esecuzione.")
     parser.add_argument('--input_dir', type=str, default=input_dir, help='Input directory path')
     parser.add_argument('--output_dir', type=str, default=output_dir, help='Output directory path')
     parser.add_argument('--param_file', type=str, default='model_params_1.yaml', help='Parameter file in YAML format')
@@ -287,13 +353,16 @@ if __name__ == "__main__":
     parser.add_argument('--case', type=int, choices=[1, 2, 3], default=2, help='Case for data split: 1, 2, or 3')
     parser.add_argument('--train_ratio', type=float, default=0.85, help='Ratio for training data')
     parser.add_argument('--val_ratio', type=float, default=0.15, help='Ratio for validation data')
-    
+    parser.add_argument('--train_data', type=str, nargs='+', help ='List of data keys to train the model on')
+    parser.add_argument('--transform_data', type=str, nargs='+', help ='List of data keys to transform after running the model')
+
     
     
     args = parser.parse_args()
     args.name ="buddy"  # Imposta un nuovo nome del soggetto
     args.model_type="cebra_behavior"
     args.use_grid=False
+    args.train_data=['X']
     print(f"processing data of {args.name}")
     
     #à# dynamic name
@@ -307,7 +376,10 @@ if __name__ == "__main__":
         args.use_grid,
         args.case,
         args.train_ratio,
-        args.val_ratio
+        args.val_ratio, 
+        args.train_data,
+        args.transform_data
+        
     )
 
 

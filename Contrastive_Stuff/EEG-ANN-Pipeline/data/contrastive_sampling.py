@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from data import DatasetEEGTorch
 
-# ----------------------------- Standard InfoNCE ----------------------------- #
+#----------------------------- Standard InfoNCE ----------------------------- #
 
 # Permette di samplare indici per costruire i sample positivi
 # a partire da una label discreta
@@ -144,51 +144,90 @@ class DataLoaderContrastive():
     
 
 # ---------------------------- My modified InfoNCE --------------------------- #
+import torch
+import torch
+import torch
+
 class LabelsDistance:
-
     def __init__(self, labels_distance_functions):
-        if type(labels_distance_functions) is dict:
-            self.multi_label = True
-        else:
-            self.multi_label = False
+        """
+        Inizializza LabelsDistance.
 
-        self.labels_distance_functions = labels_distance_functions
+        Args:
+            labels_distance_functions (dict or single function):
+                - Dcictionar can be sngle or multi-label (position+direction).
+                - Single functon: single label
+        """
+        #### caso dict (multi o single label)
+        if isinstance(labels_distance_functions, dict):
+            self.labels_distance_functions = labels_distance_functions
+            self.label_keys = list(labels_distance_functions.keys())  
+            self.multi_label = len(self.label_keys) > 1 
+        else:
+            ## caso in cui passi la funzione senza dict
+            self.labels_distance_functions = labels_distance_functions  #
+            self.label_keys = None
+            self.multi_label = False  
 
     def get_weights(self, labels):
-    
-        def pairwise_tensor_function(f, x):
-            x = x.view((-1, 1))
-            return f(x, x.T)
+        """
+       COmpute the matrix distance between labels in batch (weights for loss)
         
-        if self.multi_label:
-            weights = []
+
+        Args:
+            labels (dict o tensore singolo): 
+                - if multi-label,it is a dict (ex. {"position": tensor(512,2), "direction": tensor(512,)}).
+                - if mono-label, can be asingle tensor or a dict with just one key.
+
+        Returns:
+            torch.Tensor: distance matrix (batch_size, batch_size, num_labels)
+            num labels = 1,2,...N
+        """
+               
+        
+        def pairwise_tensor_function(f, x):
+            return f(x, x.T) if x.ndim == 1 else f(x, x)
+
+        #  Se labels è un dizionario (MULTI-LABEL o MONO-LABEL con una sola chiave)
+        if isinstance(labels, dict):
             
-            # Compute pairwise weights for each label
-            for label_name in labels:
-                weight = pairwise_tensor_function(
-                    self.labels_distance_functions[label_name],
-                    labels[label_name]
+            
+            if len(labels) == 1:  # dictionary with one label
+                label_name = next(iter(labels))
+                ### get the function from the label
+                f = (self.labels_distance_functions[label_name]  #
+                    if isinstance(self.labels_distance_functions, dict)
+                    else self.labels_distance_functions  
                 )
-                print(f"Weight for label '{label_name}': Shape {weight.shape}")
+                weight = pairwise_tensor_function(f, labels[label_name])
+                #print(f"Shape di weight prima del view: {weight.shape}")  # Debug
+               # print(f"\n Matrice di distanza per '{label_name}':\n", weight)
+                ## matrix of distances with an extra dimension for weights
+                return weight.view((weight.shape[0], weight.shape[1], 1))
+
+            # Multi-label
+            weights = []
+            for label_name, label_values in labels.items():
+                f = self.labels_distance_functions[label_name]  # Prende la funzione giusta dal dizionario
+                weight = pairwise_tensor_function(f, label_values)
+               # print(f"Shape di weight per {label_name}: {weight.shape}")  # Debug
+               # print(f"\nMatrice di distanza per '{label_name}':\n", weight)
                 weights.append(weight)
             
-            # Find the maximum shape
-            max_shape = max(weight.shape for weight in weights)
-            
-            # Pad each weight to the maximum shape
-            weights_padded = [
-                torch.nn.functional.pad(
-                    weight, 
-                    (0, max_shape[1] - weight.shape[1], 0, max_shape[0] - weight.shape[0])
-                )
-                for weight in weights
-            ]
-            
-            # Stack padded weights
-            return torch.stack(weights_padded, dim=-1)
-        
+            return torch.stack(weights, dim=-1)  # (batch_size, batch_size, num_labels)
+
+        # MONO-LABEL with single (ad es. LabelsDistance(adaptive_gaussian_distance))
+        # either it uses straight the function or get the dict key
         else:
-            batch_size = len(labels)
-            return pairwise_tensor_function(
-                self.labels_distance_functions, labels
-            ).view((batch_size, batch_size, 1))
+            f = (
+                self.labels_distance_functions
+                if callable(self.labels_distance_functions)
+                else next(iter(self.labels_distance_functions.values()))  
+            )
+            
+            weight = pairwise_tensor_function(f, labels)
+           # print(f"Shape di weight per single-label: {weight.shape}")  # Debug
+            # PRINT distance matrix
+            #print("\n🔹 Distance matrix for single-label:\n", weight.cpu().detach().numpy())
+
+            return weight.view((weight.shape[0], weight.shape[1], 1))
