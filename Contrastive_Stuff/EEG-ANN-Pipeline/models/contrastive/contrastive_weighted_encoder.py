@@ -138,7 +138,8 @@ class EncoderContrastiveWeights(BaseModel):
         
         # Qui avviene il broadcasting!
         #weighted_weights = self.labels_weights * weights  
-        #print(f"Weighted Weights Shape: {weighted_weights.shape}")### doubel summation over batches i different from j of the log sum 
+        #print(f"Weighted Weights Shape: {weighted_weights.shape}")
+        ### doubel summation over batches i different from j of the log sum 
         # loss part link to embedding alignment
         alignement = -torch.sum(self.labels_weights * torch.sum(torch.logsumexp(psi_weighted, dim=1), dim=0))
         uniformity = total_label_weight * torch.sum(torch.logsumexp(psi, dim=1))
