@@ -11,29 +11,27 @@ import warnings
 import typing
 import numpy as np
 import yaml
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 import argparse
 import re
 import joblib as jl
 import logging
 import time
-#import openTSNE
-import argparse
-import json
 import scipy.sparse as sp
 import sympy
+import plotly.graph_objects as go
 from sklearn.model_selection import ParameterGrid, train_test_split
-from joblib import Parallel, delayed
-import numpy as np
+#from joblib import Parallel, delayed
 import torch
 from pathlib import Path
-import multiprocessing
+#import multiprocessing
 from numpy.lib.stride_tricks import as_strided
-from multiprocessing import Pool
+#from multiprocessing import Pool
 import random
 import cebra.datasets
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
-#import umap
-from io import BytesIO
+#from io import BytesIO
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -47,13 +45,9 @@ import h5py
 import pathlib
 from matplotlib.markers import MarkerStyle
 import seaborn as sns
-import pickle
-import hashlib
 import json
-import joblib
 import copy
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
+
 #plt.switch_backend("webagg")  # Forza il backend del browser
 #lt.ion()
 
@@ -64,7 +58,7 @@ import matplotlib.pyplot as plt
 
 def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
     """
-    Dynamically configure paths for the project.
+    Configure paths for the project.
     
     Args:
         change_dir (bool): If True, changes the current working 
@@ -82,11 +76,11 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
     try:
         project_root = Path(__file__).resolve().parent
     except NameError:
-        project_root = Path(os.getcwd())  # Fallback to cwd if __file__ is not available
-
+        # Fallback to cwd if __file__ is not available
+        project_root = Path(os.getcwd()) 
     logger.info(f"Project root resolved to: {project_root}")
 
-    # Define important paths
+    # Define  paths
     eeg_pipeline_path = project_root / pipe_path
     logger.info(f"Path to 'EEG-ANN-Pipeline': {eeg_pipeline_path}")
 
@@ -120,7 +114,7 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
 
 
 
-###########################  Funzione per caricare i dati sulla base delle info date ########
+########################### GENERIC LOAD DATA FUNCTION ##############
 # def load_data(input_dir, name):
 #     input_dir = Path(input_dir).resolve()
 #     path =input_dir / f"{name}.jl"
@@ -128,40 +122,30 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
 #     #path = os.path.join(input_dir, f"{name}.jl")
 #     try:
 #         data = jl.load(path)
-#         return data  # Return the loaded data if successful
+#         return data  
 #     except FileNotFoundError as e:
 #         print(f"File Not Found Error: {e}")
 #         return None  # Return
 
-# def load_data_mat(input_dir, name):
-#     input_dir = Path(input_dir).resolve()
-#     path =input_dir / f"{name}.mat"
-#     print(path)
-#     #path = os.path.join(input_dir, f"{name}.jl")
-#     try:
-#         data = scipy.io.loadmat(path)
-#         return data  # Return the loaded data if successful
-#     except FileNotFoundError as e:
-#         print(f"File Not Found Error: {e}")
-#         return None  # Return
 
 
 def load_data(input_dir, name, file_format):
     """
-    Generica funzione per caricare dati in vari formati.
+    Generic fucntions to load data with different extension.
 
     Args:
-        input_dir (str): Cartella dei dati.
-        name (str): Nome del file (senza estensione).
-        file_format (str): Formato del file (es: "json", "pkl", "mat", "jl", "csv", "txt").
+        input_dir (str): Data Folder
+        name (str): filename (with no extension).
+        file_format (str): file format 
+        (es: "json", "pkl", "mat", "jl", "csv", "txt").
     
     Returns:
-        Dati caricati nel formato appropriato o None se errore.
+        Data or none if error.
     """
-    input_dir = Path(input_dir).resolve()
-    path = input_dir / f"{name}.{file_format}"  # Crea il percorso dinamico
+    input_dir = Path(input_dir).resolve()    
+    path = input_dir / f"{name}.{file_format}"  
     
-    print(f"Tentativo di caricare: {path}")  # Debug
+    print(f"try to load: {path}")  # Debug
 
     try:
         if file_format == "json":
@@ -181,7 +165,7 @@ def load_data(input_dir, name, file_format):
         elif file_format == "csv":  # CSV (DataFrame)
             return pd.read_csv(path)
         
-        elif file_format == "txt":  # Testo puro
+        elif file_format == "txt":  # Pure Text
             with open(path, "r", encoding="utf-8") as f:
                 return f.readlines()
         
@@ -227,38 +211,99 @@ def create_rats_trial(behav_data):
         
         trial_ids[i] = current_trial  # Assign current trial ID to each position
         
-    return trial_ids, c_t
+    return trial_ids, c_t 
 
-#### funzione per resmplare i dati 
-def f_resample(datasets, step):
+#### RESAMPLIGN DATA FUNCTION 
+#### RESAMPLIGN DATA FUNCTION 
+def f_resample(datasets, trials, step, overlap, methods, mode="disjoint", normalization=False):  
     """
-    Esegue il resampling di una lista di dataset, s
-    supportando array numerici e matrici di stringhe.
-
+    
+    resampling of dataset list, split into trial taking with the option to 
+    take overlapping or disjoint windows
+    - window central value
+    - window mean
+    - window sum
+    
     Args:
-        datasets (list of list or numpy.ndarray): Lista di dataset da resamplare.
-        step (int): Dimensione della finestra per il resampling.
+        - datasets (lis):dataset to be resampled
+        - trials (list): every sublist tells where every trial starts and ends
+        - step (int): resmplign window dimension
+        - methods (dict): dictionary with key mean center or sum
+        - overlap (int): Numero di punti di sovrapposizione tra finestre
+            consecutive (on only with mode="overlapping").
+        mode (str):  resampling mode, "disjoint" (no overlapping) 
+        "overlapping" (moving window)
 
     Returns:
         list: Lista di dataset resamplati.
+        new_trial_lengths: list of lengths of each resampled trial
+        new_trials_indices: list of (start, end) indices for each trial
+    
     """
     resampled_datasets = []
-    
-    for dataset in datasets:
-        # Ottieni la lunghezza del dataset
-        n_rows = len(dataset)
-        
-        # Calcolo degli indici centrali
-        indices = [min(i + step // 2, n_rows - 1) for i in range(0, n_rows, step)]
- 
-        resampled=dataset[indices]
-        print(indices)
-        resampled_datasets.append(resampled)
-    
-    return resampled_datasets
+    new_trials_indices = []
+    new_trial_lengths = []
+
+    stride = step if mode == "disjoint" else step - overlap  
+
+    for i, dataset in enumerate(datasets):
+        resampled_trials = []
+        trial_lengths = []
+        trial_indices = []
+        # if not specified default method is "center"
+        method = methods.get(i, "center")  
+        current_start=0
+        # Iterate pver trials of the i-th dataset
+        for start_trial, end_trial in trials: 
+            # extract trial
+            trial_data = dataset[start_trial:end_trial]  
+            n_rows = len(trial_data)
+
+            resampled = []
+            # actual window
+            for start in range(0, n_rows - step + 1, stride):
+                end = start + step  
+
+                if method == "center":
+                    idx = min(start + step // 2, n_rows - 1)
+                    resampled.append(trial_data[idx])
+                
+                elif method == "mean":
+                    resampled.append(np.mean(trial_data[start:end], axis=0))
+                
+                elif method == "sum":
+                    sum_val = np.sum(trial_data[start:end], axis=0)
+                    if normalization:
+                        # Normalization to prevent inflated counts
+                        corrected_sum = sum_val * (stride / step)  
+                        resampled.append(corrected_sum)
+                    else:
+                        resampled.append(sum_val)
+                    
+                    
+              
         
 
+            if resampled:
+                resampled_array = np.array(resampled)
+                resampled_trials.append(resampled_array)
+                trial_len = resampled_array.shape[0]
+                trial_lengths.append(trial_len)
+                trial_indices.append((current_start, current_start + trial_len-1))
+                current_start += trial_len
+            else:
+                trial_lengths.append(0)
+                trial_indices.append((current_start, current_start))
 
+        if resampled_trials:
+            resampled_concat = np.concatenate(resampled_trials)
+            resampled_datasets.append(resampled_concat)
+        else:
+            resampled_datasets.append(np.array([]))
+
+        new_trial_lengths.append(trial_lengths)
+        new_trials_indices.append(trial_indices)
+    return resampled_datasets, new_trial_lengths, new_trials_indices
 
 ############################ DATA SPLITTER ACCORDING TO TRIALS   #######################
 
@@ -438,7 +483,7 @@ def split_data_trials(data, case=1, shuffle=False, seed=None, train_ratio=0.7, v
 
 
 
-##### load parameters
+##### LOAD PARAMETERS from yaml (actual version fits cebra needings)
 
 extra_params = {}
 def load_params(params_path):
@@ -582,6 +627,188 @@ def plot_embs_discrete(emb, label, title,ratio, ww):
                    s=0.2)
     ax.axis('on')
     plt.show()
+    
+    
+    
+
+def plot_direction_averaged_embedding(z_, l_dir_, original_label_order, c_s,
+                                      output_folder, name, trial_length=None,
+                                      constant_length=True, ww=10,
+                                      label_swap_info=None):
+    """
+  Plot averaged neural embedding trajectories normalized on a unit sphere,
+  preserving the original label order and optionally displaying a mapping
+  between modified and original labels in the legend.
+
+  Args:
+      z_: ndarray - Neural embedding (time x dim)
+      l_dir_: ndarray - Labels used during training (possibly remapped)
+      original_label_order: list[int] - Order in which to plot original directions
+      c_s: str - Color used for "start" markers
+      output_folder: str - Path where output will be saved
+      name: str - Name of the HTML file to export
+      trial_length: int - Length of each trial (required for reshaping)
+      constant_length: bool - If True, assumes trial lengths are uniform
+      ww: int - Model receptive window size to subtract
+      label_swap_info: dict - Mapping {original_label: label_used_in_training}
+  """
+    
+    # create unit sphere
+    u = np.linspace(0, 2 * np.pi, 50)
+    v = np.linspace(0, np.pi, 50)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones(np.size(u)), np.cos(v))
+    fig = go.Figure()
+    fig.add_trace(go.Surface(x=x, y=y, z=z, colorscale="Blues", opacity=0.1, 
+                             showscale=False))
+    
+    
+    #   "Start" and "End" markers
+    fig.add_trace(go.Scatter3d(
+        x=[None], y=[None], z=[None],
+        mode="markers",
+        marker=dict(color=c_s, size=5, symbol="circle"),
+        name="Start"
+    ))
+    
+    fig.add_trace(go.Scatter3d(
+        x=[None], y=[None], z=[None],
+        mode="markers",
+        marker=dict(color="black", size=5, symbol="x"),
+        name="End"
+    ))
+    # Unique directions
+    unique_dirs = np.unique(l_dir_)
+    n_colors = len(unique_dirs)
+
+    # Setup colormap
+    cmap = plt.get_cmap('hsv', n_colors)
+    norm = mcolors.Normalize(vmin=0, vmax=n_colors - 1)
+
+   
+
+    # Define 2D circle positions for each direction (for visual reference)
+    # radius = 1.2
+    # direction_positions = [(radius * np.cos(np.deg2rad(360 * i / n_colors)),
+    #                         radius * np.sin(np.deg2rad(360 * i / n_colors)))
+    #                        for i in range(n_colors)]
+    # for i, (x, y) in enumerate(direction_positions):
+    #     fig.add_trace(go.Scatter3d(
+    #         x=[x], y=[y], z=[0],
+    #         mode="text",
+    #         text=[f"Dir {i+1}"],
+    #         textposition="middle center",
+    #         showlegend=False
+    #     ))
+
+    # Loop over trajectories
+    for idx, original_label in enumerate(original_label_order):
+
+    # Map the original label to the actual one used during training
+        used_label = label_swap_info.get(original_label, original_label) if label_swap_info else original_label
+        mask = (l_dir_ == original_label)
+        print(mask.shape)
+        if not np.any(mask):
+            print(f" No data found for original label {original_label} (used {used_label})")
+            continue
+    
+        try:
+           trial_avg = z_[mask].reshape(-1, trial_length - ww, 3).mean(axis=0)
+        except ValueError as e:
+             print(f"ValueError for label {original_label}: {e}")
+             continue
+
+    # Normalize each vector (to lie on the unit sphere)
+       
+        print("Trial average shape:", trial_avg.shape)
+        print(trial_avg.shape)
+        #trial_avg -= trial_avg.mean(axis=0)  # Sottraggo la media di ogni coordinata
+        trial_avg_normed = trial_avg/np.linalg.norm(trial_avg, axis=1)[:,None]
+    #     #trial_avg /= np.linalg.norm(trial_avg, axis=2, keepdims=True)  # Normalizzazione
+    #    # trial_avg_normed = trial_avg.mean(axis=0) 
+    #     #trial_avg = z_[direction_trial, :].reshape(-1, trial_length - ww, 3).mean(axis=0)
+    #     #trial_avg_normed = trial_avg / np.linalg.norm(trial_avg, axis=1)[:, None]
+    
+        # Colore della traiettoria con Matplotlib colormap
+        #color =cmap(idx)   # Stesso colore di Matplotlib
+        
+
+        
+        
+        # Map color to the current trajectory
+        color = cmap(norm(idx))
+        #color = cmap(norm(idx - 1))
+        hex_color = f'rgb({color[0]*255:.0f},{color[1]*255:.0f},{color[2]*255:.0f})'
+        
+        
+                # Construct label for the legend
+        if label_swap_info and original_label in label_swap_info:
+            label_display = f"{original_label} → {label_swap_info[original_label]}"
+        else:
+            label_display = f"{original_label}"
+        
+                
+        # Aggiunta della traiettoria
+        fig.add_trace(go.Scatter3d(
+            x=trial_avg_normed[:, 0],
+            y=trial_avg_normed[:, 1],
+            z=trial_avg_normed[:, 2],
+            mode="lines",
+            line=dict(color=hex_color, width=3),
+            # direction label
+            name=label_display
+
+        ))
+    
+        # Aggiunta dei marker Start e End per OGNI traiettoria
+        fig.add_trace(go.Scatter3d(
+            x=[trial_avg_normed[0, 0]],
+            y=[trial_avg_normed[0, 1]],
+            z=[trial_avg_normed[0, 2]],
+            mode="markers+text",
+            marker=dict(color=c_s, size=3, symbol="circle"),
+            text=[f"s {original_label}"],
+            textposition="top right",
+            showlegend=False   
+        ))
+    
+        fig.add_trace(go.Scatter3d(
+            x=[trial_avg_normed[-1, 0]],
+            y=[trial_avg_normed[-1, 1]],
+            z=[trial_avg_normed[-1, 2]],
+            mode="markers+text",
+            marker=dict(color="black", size=3, symbol="x"),
+            text=[f"e {original_label}"],
+            textposition="top right",
+            showlegend=False  
+        ))
+    
+    # Griglia e legenda
+    fig.update_layout(
+        title=dict(
+            ## chekc the name
+        text=name,  
+        x=0.5,  #
+        xanchor='center',  
+    ),
+        scene=dict(
+            xaxis=dict(showgrid=True, gridcolor="gray", title='x1'),
+            yaxis=dict(showgrid=True, gridcolor="gray", title='x2'),
+            zaxis=dict(showgrid=True, gridcolor="gray", title='x3'),
+        ),
+        legend=dict(x=1.1, y=1, font=dict(size=10), title ='Direction of Movement'),
+    )
+    
+    # Salvataggio del file HTML e PNG
+    #output_folder = "output_plots"
+    #os.makedirs(output_folder, exist_ok=True)
+    output_html = os.path.join(output_folder, name)
+    #output_png = os.path.join(output_folder, "plot_interattivo.png")
+    
+    fig.write_html(output_html)
+    #fig.write_image(output_png, scale=2)
+    fig.show(renderer="browser")
 
 
 
@@ -731,3 +958,21 @@ def circular_cv_split(trials, train_trials, val_ratio, split_idx):
     val_trials = unique_train_trials[val_indices]
 
     return subtrain_trials, val_trials
+
+###################################### LABEL SWAP ############################
+
+def swap_labels(labels, swap_dict):
+    """
+    Swap lables accordin to a given dict
+
+    Args:
+        labels (np.array): original labels
+        swap_dict (dict): the given dict to swap, es. {3: 6, 6: 3}.
+
+    Returns:
+        np.array: swapped array
+            """
+    swapped_labels = labels.copy()
+    for original, new in swap_dict.items():
+        swapped_labels[labels == original] = new
+    return swapped_labels

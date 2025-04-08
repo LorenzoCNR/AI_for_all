@@ -7,7 +7,7 @@ cebra_time:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 1024
-    #max_iterations: 9000
+    max_iterations: 4000
     hybrid: False
     distance: 'cosine'
     verbose: True
@@ -18,30 +18,30 @@ cebra_time:
     #temperature: 3.212991682008965
   grid:
 
-    max_iterations: [2000, 4000, 6000, 8000, 10000, 20000]
+    max_iterations: [2000, 1000, 3000]
     learning_rate: [0.0001,  0.0028521675677231,0.0003]
     num_hidden_units: [32,64]
-    temperature: [1, 1.5, 2.5, 3.212991682008965]
+    temperature: [1, 1.265961499, 2.5, 3.212991682008965]
 cebra_behavior:
   fixed:
     model_architecture: 'offset10-model'
     device: 'cuda_if_available'
     conditional: 'time_delta'
-    batch_size: 512
-    max_iterations: 10000
+    batch_size: 1024
+    max_iterations: 5000
     hybrid: False
     verbose: True
     time_offsets: 10
     output_dimension: 3
     learning_rate: 0.0001
-    num_hidden_units: 32
-    temperature: 1
+    num_hidden_units: 64
+    temperature: 1.266
   grid:
-    max_iterations: [2000, 4000, 6000, 8000, 10000, 20000]
+    max_iterations: [5000]
 
-    learning_rate: [0.0001, 0.0020507814090484,0.003]
+    learning_rate: [0.00005,0.0001]
     num_hidden_units: [32,64]
-    temperature: [1,1.265961498923956, 2, 2.5]
+    temperature: [0.5,1,2]
 
     
     
@@ -51,7 +51,7 @@ cebra_hybrid:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 256
-    max_iterations: 500
+    max_iterations: 1000
     hybrid: True
     verbose: True
     time_offsets: 10

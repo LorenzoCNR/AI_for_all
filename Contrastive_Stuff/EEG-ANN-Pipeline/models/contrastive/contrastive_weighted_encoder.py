@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from models.base_models import BaseModel
 import torch.nn.functional as F
-from torchviz import make_dot
+#from torchviz import make_dot
 
 ''' Logic (Computationa graph)
      Input x  
@@ -110,7 +110,7 @@ class EncoderContrastiveWeights(BaseModel):
 
         # Mask diagonal elements to ignore self-similarity
         # Stabilize diagonal elements
-        #psi.fill_diagonal_(-1e15)
+        psi.fill_diagonal_(-1e15)
 
         # add 1 to avoid 0
         # could also add a numebr close to zero

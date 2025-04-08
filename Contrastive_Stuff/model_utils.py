@@ -1,5 +1,5 @@
-#import openTSNE
-import umap
+import openTSNE
+#import umap
 import cebra
 from joblib import Parallel, delayed
 import numpy as np
@@ -11,7 +11,6 @@ from multiprocessing import Pool
 import random
 import cebra.datasets
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
-import umap
 from io import BytesIO
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -21,13 +20,13 @@ from cebra import CEBRA
 def create_model(model_type, params, **extra_params):
     if model_type == 'tsne':
         return openTSNE.TSNE(**params)
-    elif model_type == 'umap':
-        return umap.UMAP(**params)
+   # elif model_type == 'umap':
+     #    return umap.UMAP(**params)
     elif model_type in ['cebra_time', 'cebra_behavior', 'cebra_hybrid']:
         return CEBRA(**params)
-    elif model_type == 'conv_pivae':
-        all_params = {**params, **extra_params}
-        return pivae_code.conv_pi_vae.conv_vae_mdl(**all_params)
+    #elif model_type == 'conv_pivae':
+    #    all_params = {**params, **extra_params}
+   #     return pivae_code.conv_pi_vae.conv_vae_mdl(**all_params)
     else:
         raise ValueError("Unsupported model type")
 
@@ -133,15 +132,36 @@ def run_model(model_type, params, data_, train_data=None, transform_data=None, s
     
     results['fitted_model']=fitted_model
     # Save training loss if available
-    if hasattr(fitted_model, 'state_dict_') and 'loss' in fitted_model.state_dict_:
-        results['train_loss'] = fitted_model.state_dict_['loss']
+    
+    try:
+        if hasattr(results['fitted_model'], 'state_dict_') and isinstance(results['fitted_model'].state_dict_, dict):
+            if 'loss' in results['fitted_model'].state_dict_:
+                results['train final loss'] = results['fitted_model'].state_dict_['loss'][-1].numpy()
+            else:
+                 # Pre defined value
+                results['train final loss'] = None 
+                # if model has no state_dict
+        else:
+            results['train final loss'] = None  
+                # avoid crash
+    except AttributeError:
+            results['train final loss'] = None  
+    
+   # if hasattr(fitted_model, 'state_dict_') and 'loss' in fitted_model.state_dict_:
+   #     results['train_loss'] = fitted_model.state_dict_['loss']
+   # else: 
+  #      pass
 
     # Assign transform data and generate embeddings
-    if transform_data:
+    if transform_data and hasattr(fitted_model, 'transform'):
         for key in transform_data:
             X = data_.get(key)
             if X is not None:
-                results[f'embeddings_{key}'] = fitted_model.transform(X)
+                try:
+                    results[f'embeddings_{key}'] = fitted_model.transform(X)
+                except Exception as e:
+                    print(f"⚠️ Warning: Impossibile trasformare {key} con {model_type}: {e}")
+                    results[f'embeddings_{key}'] = None  # 
 
     # Save results
     # if save_results:
