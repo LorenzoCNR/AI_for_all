@@ -28,7 +28,7 @@ cebra_behavior:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 1024
-    max_iterations: 5000
+    max_iterations: 12000
     hybrid: False
     verbose: True
     time_offsets: 10

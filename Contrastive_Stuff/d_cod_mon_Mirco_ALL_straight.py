@@ -32,7 +32,7 @@ main_folder
 # need to declare:
 # 1) PROJECT root directory
 #   windows directories
-#i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
+i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
 # # 
 
 
@@ -93,7 +93,7 @@ torch.backends.cudnn.benchmark = True
 #     return data
 
 
-# ### likely resampling 
+# # ### likely resampling 
 
 
 # # 1. Prompt per le directory principali
@@ -122,7 +122,7 @@ import torch
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 
 
-# # BUILD the model encoder. (1: cnnd1d simil cebra with skip connections)
+# BUILD the model encoder. (1: cnnd1d simil cebra with skip connections)
 # def build_model(filters, dropout, latents, num_timepoints, chns, num_units=None, groups=1,normalize=True):
 #     """
 #     Build a cnn1d model with:
@@ -158,25 +158,25 @@ from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 
 
 
-# #### Build the model encoder (2: cnn2d)
-# # 
-# '''
-# def build_model(filters, dropout, latents, num_timepoints, chns):
+#### Build the model encoder (2: cnn2d)
+# 
+'''
+def build_model(filters, dropout, latents, num_timepoints, chns):
     
-#     return nn.Sequential(
-#         nn.Conv2d(1, filters, kernel_size=(1, num_timepoints)),
-#         nn.BatchNorm2d(filters),
-#         nn.Conv2d(filters, filters, kernel_size=(chns, 1), groups=filters),
-#         nn.BatchNorm2d(filters),
-#         nn.Dropout(dropout),
-#         nn.Flatten(),
-#         nn.Linear(filters, filters),
-#         nn.SELU(),
-#         nn.Dropout(dropout),
-#         nn.Linear(filters, latents)
-#     )
+    return nn.Sequential(
+        nn.Conv2d(1, filters, kernel_size=(1, num_timepoints)),
+        nn.BatchNorm2d(filters),
+        nn.Conv2d(filters, filters, kernel_size=(chns, 1), groups=filters),
+        nn.BatchNorm2d(filters),
+        nn.Dropout(dropout),
+        nn.Flatten(),
+        nn.Linear(filters, filters),
+        nn.SELU(),
+        nn.Dropout(dropout),
+        nn.Linear(filters, latents)
+    )
 
-# '''
+'''
 
 # def generate_embeddings(model, dataset_pytorch, batch_size, device):
 #     model.eval()
@@ -200,45 +200,45 @@ from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
  
 #     return z ,labels_direction
 
-# ### DECODING (to be done)
-# # def decoding_knn(embedding_train, embedding_test, label_train, label_test,metric, n_n):
-# #     #metric = 'cosine'
-# #     #n_n = 25
-# #     pos_decoder = KNeighborsRegressor(n_neighbors=n_n, metric=metric)
-# #     dir_decoder = KNeighborsClassifier(n_neighbors=n_n, metric=metric)
+### DECODING (to be done)
+# def decoding_knn(embedding_train, embedding_test, label_train, label_test,metric, n_n):
+#     #metric = 'cosine'
+#     #n_n = 25
+#     pos_decoder = KNeighborsRegressor(n_neighbors=n_n, metric=metric)
+#     dir_decoder = KNeighborsClassifier(n_neighbors=n_n, metric=metric)
 
-# #     pos_decoder.fit(embedding_train, label_train[:, 0])
-# #     dir_decoder.fit(embedding_train, label_train[:, 1])
+#     pos_decoder.fit(embedding_train, label_train[:, 0])
+#     dir_decoder.fit(embedding_train, label_train[:, 1])
 
-# #     pos_pred = pos_decoder.predict(embedding_test)
-# #     dir_pred = dir_decoder.predict(embedding_test)
+#     pos_pred = pos_decoder.predict(embedding_test)
+#     dir_pred = dir_decoder.predict(embedding_test)
 
-# #     prediction = np.stack([pos_pred, dir_pred], axis=1)
+#     prediction = np.stack([pos_pred, dir_pred], axis=1)
 
-# #     test_score = sklearn.metrics.r2_score(
-# #     label_test[:, :2], prediction, multioutput='variance_weighted')
-# #     max_label = np.max(label_test[:, 0])
-# #     print(f'Max value of label_test[:, 0] is: {max_label}')
+#     test_score = sklearn.metrics.r2_score(
+#     label_test[:, :2], prediction, multioutput='variance_weighted')
+#     max_label = np.max(label_test[:, 0])
+#     print(f'Max value of label_test[:, 0] is: {max_label}')
     
-# #     pos_test_err_perc = np.median(abs(prediction[:, 0] - label_test[:, 0]) / max_label * 100)
+#     pos_test_err_perc = np.median(abs(prediction[:, 0] - label_test[:, 0]) / max_label * 100)
     
-# #     pos_test_err = np.median(abs(prediction[:, 0] - label_test[:, 0]))
+#     pos_test_err = np.median(abs(prediction[:, 0] - label_test[:, 0]))
     
-# #     pos_test_score = sklearn.metrics.r2_score(
-# #         label_test[:, 0], prediction[:, 0])
+#     pos_test_score = sklearn.metrics.r2_score(
+#         label_test[:, 0], prediction[:, 0])
 
-# #     return test_score, pos_test_err,pos_test_err_perc, pos_test_score
+#     return test_score, pos_test_err,pos_test_err_perc, pos_test_score
 
 
-# #def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, latents, ww, sigma_pos, sigma_time, train_split, valid_split, l_rate, batch_size, fs, shift,normalize, neighbors):
-#     # load data
+#def run_d_code(input_dir, output_dir, name, filters, tau, epochs, dropout, latents, ww, sigma_pos, sigma_time, train_split, valid_split, l_rate, batch_size, fs, shift,normalize, neighbors):
+    # load data
    
 
 
-# # # recall the input dir (declared upwards) and import data
-# # input_dir = default_input_dir
-# # # data format
-# # d_format="mat"
+# # recall the input dir (declared upwards) and import data
+# input_dir = default_input_dir
+# # data format
+# d_format="mat"
 # # # data_name
 # # d_name='dati_mirco_18_03_joint'
 # # data = load_data(input_dir, d_name,d_format)
@@ -260,9 +260,9 @@ Data Structure:
 def main():
     output_folder=default_output_dir
     # Get X, y and trial id
-    X = data['joint_mix_neural']
-    y_dir = data['joint_mix_trial']
-    trial_id = data['joint_mix_trial_id']
+    X = data['s_joint_neural']
+    y_dir = data['s_joint_trial']
+    trial_id = data['s_joint_trial_id']
     trial_id=trial_id.flatten()
     original_label_order = np.sort(np.unique(y_dir))
     
@@ -309,7 +309,7 @@ def main():
     swap_dict=None
     y_dir_res=[]
     for i in range(len(c_t)-1):
-        print(i)
+        #print(i)
         y_dir_res.append(y_dir_original[c_t[i]:c_t[i+1]-10].T)
     y_dir_res_0 = np.concatenate(y_dir_res, axis=0) 
     #Swapping (on demand)
@@ -350,8 +350,8 @@ def main():
 ## check
     explore_obj(trials[5])
     dataset = DatasetEEG(trials)
-    print(dataset)
-    print(dataset.trials[1])
+    #print(dataset)
+    #print(dataset.trials[1])
     explore_obj(dataset.trials[1])
     dataset.trials[0].eeg_signals.shape
 
@@ -370,7 +370,7 @@ def main():
     '''
     ### 
     dataset_windows=dataset.create_windows(ww, shift)
-    print(dataset_windows)
+    #print(dataset_windows)
     # check
     explore_obj(dataset_windows.trials[2500])
     
@@ -407,11 +407,11 @@ def main():
     batch_size=1024
     dataloader_ = DataLoader(dataset_pytorch, batch_size=batch_size, shuffle=False)
 ## explore the dataloader
-    for batch in dataloader_:
-        #►pippo.append(batch)
-        print(type(batch[1])) 
-        print(batch[0].shape)       
-        break 
+    # for batch in dataloader_:
+    #     #►pippo.append(batch)
+    #     print(type(batch[1])) 
+    #     print(batch[0].shape)       
+    #     break 
 
 #################################################################################
 # Build and train the model
@@ -424,7 +424,7 @@ def main():
     ## temperature
     #@tau = 0.5
    ## network hidden layers channles
-    filters = 64
+    filters = 32
    ## output channels (latents)
     latents = 3
    # learning rate
@@ -434,10 +434,10 @@ def main():
    #sigma_time = 0.025
     num_units = filters
     normalize=True
-    filters=64
+  
     num_units=filters
-    epochs=500
-    tau=1.266
+    epochs=2000
+    tau=1
     model = EncoderContrastiveWeights(
         ### define the network (recall the parameters defined from line 209)
         layers=build_model(filters, dropout, latents, ww, chns, normalize=normalize),
@@ -463,7 +463,7 @@ def main():
     model.to(device)
 
     print("Model architecture:", model)
-    print(f"Model has {count_model_parameters(model)} parameters.")
+    #print(f"Model has {count_model_parameters(model)} parameters.")
     #print(f"subject is {name}")
     print(f"{device}")
     
@@ -482,7 +482,7 @@ def main():
     
     
     c_s="maroon"
-    default_title = f"CL_cond3_resampled_no_overlap_mean_lr_{l_rate}_nhu_{num_units}_temp{tau}.html"
+    default_title = f"S_CL_cond3_resampled_shift_5_sum_lr_{l_rate}_nhu_{num_units}_temp_{tau}_iter_{epochs}.html"
 
     title_ = input(f"Inserisci il nome del file di output (default: {default_title}): ") or default_title
 

@@ -70,6 +70,7 @@ from some_functions import *
 import json
 import copy
 import time
+import shap
 import numpy as np
 import yaml
 import pickle
@@ -142,17 +143,17 @@ input_dir = default_input_dir
 # data format
 d_format="mat"
 # data_name
-d_name='dati_mirco_18_03_joint'
+d_name='dati_mirco_18_03_k'
 data = load_data(input_dir, d_name,d_format)
 print(type(data)) # must be a dictionary
 
      
 #X=data['m1_active_neural'][:,[0,2]]
-X=data['joint_mix_neural']
-y_dir=data['joint_mix_trial']
+X=data['k_act_neural']
+y_dir=data['k_act_trial']
 y_dir=y_dir.flatten()
 #y_pos=data['mix_active_trial']
-trial_id=data['joint_mix_trial_id']
+trial_id=data['k_act_trial_id']
 trial_id=trial_id.flatten()
 len_y=len(y_dir)
 change_idx = np.where(np.diff(trial_id) != 0)[0] + 1
@@ -192,7 +193,7 @@ for start_trial, end_trial in c_t_list:
 
 
 methods = {
-    0: "mean",  
+    0: "sum",  
     1: "center"  
     #,2: "mean"
 }
@@ -218,17 +219,17 @@ r_trial_indices[0][1][0]
 unique_labels = np.unique(resampled[1])
 ### 6-3, 3-6
 
-swap_dict = {3: 6, 6: 3}
+#swap_dict = {3: 6, 6: 3}
 
 # Apply mapping back to restore original labels (optional)
-resampled_swapped = swap_labels(resampled[1], swap_dict)
+#resampled_swapped = swap_labels(resampled[1], swap_dict)
 
 
 
 ### ricampionamento e permutazione delle labels ###
 
-X_=X
-y_dir_=y_dir
+X_=resampled[0]
+y_dir_=resampled[1]
 data_={"X":X_,"y":y_dir_}
 train_data_=['X', 'y']
 transform_data_=['X']
@@ -240,11 +241,11 @@ output_folder = default_output_dir
 results_list=[]
 #title='CEBRA-behavior trained with target label'
 ww=0
-trial_length=trial_len[0]
+trial_length=r_trial_lengths[0][0]
 y_dir_=y_dir_.flatten()
 #☻plot_embs_discrete(X_hat,y_dir_, title,trial_length, ww)
 
-constant_len=True
+const_len=True
 
 
 
@@ -317,7 +318,7 @@ for p in param_list:
      l_r=model_params['learning_rate']
      n_h_u=model_params['num_hidden_units']
      temp=model_params['temperature']
-     title_=f"CEBRA_cond3_shift 5_mean_lr_{l_r}_nhu_{n_h_u}_temp{temp}.html"
+     title_=f"CEBRA_cond1_shift 5_mean_lr_{l_r}_nhu_{n_h_u}_temp{temp}.html"
 
      #print(type(model_params))
      # Esegui `run_model` con i dati di input e i parametri specifici
@@ -327,7 +328,7 @@ for p in param_list:
          data_=data_,
          train_data=train_data_,
          #transform_data=transform_data_,
-         save_results=False
+         save_results=True
          
              )
      results['param']=p
@@ -350,6 +351,121 @@ for p in param_list:
             ww=0,
             label_swap_info=None
         ) 
+
+################################
+cebra_embeds['k_cond_3_neural_joint']=resampled[0]
+from scipy.io import savemat
+
+savemat('cebra_results.mat',cebra_embeds)
+#cebra_embeds['']
+
+############################# SHAP Evaluation ###############
+
+### estraggo la rete cebra usata ###
+model_fit=results['fitted_model']
+#network=model_fit.model_.net
+network = model_fit.model_.net.to(device)
+network
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+X_torch = torch.tensor(X_, dtype=torch.float32).unsqueeze(2)  # (n_samples, 202, 1)
+X_torch[1].shape
+
+def create_sampled_windows(X, window_size=10,n_samples=100, random_state=42):
+    np.random.seed(random_state)
+    random.seed(random_state)
+    n_timepoints, n_channels=X.shape
+    n_windows=n_timepoints-window_size+1
+    
+    windows =np.zeros((n_windows, n_channels, window_size))
+    
+   
+    for i in range(n_windows):
+       windows[i] = X[i:i+window_size].T
+   
+ 
+    id_x=random.sample(range(n_windows), n_samples)
+    #id_x=[0,1,2,4, 7]
+    sampled_windows=windows[id_x]
+    
+    
+    
+    return id_x, sampled_windows
+
+X_T=X_.T
+
+window_size=10
+id_x,X_windows = create_sampled_windows(X_,10, 100)
+X_torch = torch.tensor(X_windows, dtype=torch.float32).to(device)
+start = time.time()
+#X_torch = torch.tensor(X_windows, dtype=torch.float32)
+explainer = shap.DeepExplainer(network, X_torch)
+shap_values = explainer.shap_values(X_torch,  check_additivity=False)
+
+end = time.time()
+print(end - start)
+
+shap_importance = np.abs(shap_values).mean(axis=(0,2,3))  
+ # decreasing order
+neurons_ranked = np.argsort(-shap_importance) 
+neurons_ranked_m=neurons_ranked+1
+# def create_batches(X, batch_size):
+#     batches = []
+#     for i in range(0, len(X) - batch_size + 1):
+#         batch = X[i:i+batch_size]
+#         batches.append(batch)
+#     return np.stack(batches)
+# window_size = 10
+# X_batches = create_batches(X_, window_size)
+
+# def safe_transform(X_batch):
+#     if X_batch.shape[0] < 10:
+#         # Se ho meno di 10 esempi, duplico casualmente fino a 10
+#         needed = 10 - X_batch.shape[0]
+#         X_augmented = np.vstack([X_batch, X_batch[np.random.choice(X_batch.shape[0], size=needed)]])
+#         transformed = fitted_model.transform(X_augmented)
+#         return transformed[:X_batch.shape[0]]  # ritorna solo quelli veri
+#     else:
+#         return fitted_model.transform(X_batch)
+
+#X_background = shap.sample(X_, 100, random_state=42)
+#explainer = shap.KernelExplainer(safe_transform, X_background)
+#shap_values0 = explainer.shap_values(X_, nsamples=100)
+#neuronal_importance = np.mean(np.abs(shap_values), axis=(0, 2))  # shape (202,)
+#neuronal_importance0 = np.mean(np.abs(shap_values0), axis=(0, 2))  # shape (202,)
+
+### rimuovo outliers
+neuronal_importance = np.clip(neuronal_importance, -1e5, 1e5)
+neuronal_importance0 = np.clip(neuronal_importance0, -1e5, 1e5)
+
+# Ordina decrescentemente
+top_indices = np.argsort(-neuronal_importance0)
+
+# Quanti neuroni vuoi vedere? (es. top 20)
+n_top = 20
+top_neurons = top_indices[:n_top]
+
+
+
+
+plt.figure(figsize=(12,6))
+plt.bar(range(n_top), neuronal_importance[top_neurons], color='mediumblue')
+plt.xticks(range(n_top), [f"Neuron {i}" for i in top_neurons], rotation=45, ha='right')
+plt.ylabel('Mean absolute SHAP value')
+plt.title('Top Neurons by SHAP Importance')
+plt.grid(axis='y')
+plt.tight_layout()
+plt.show()
+#X_background = shap.sample(X_batches, 100, random_state=42)
+
+
+
+
+#X_hat_old=X_hat
+
+
+
 
      ## SE STIMI SENZA VALIDARE COMMENTA LE RIGHE SUCCESSIVE 
      ### compute infonce also on validation data: comment to skip it 
@@ -376,7 +492,7 @@ for p in param_list:
 
 # second
 #n_traj=np.arange(8)+9
-#
+'''
 fig = plt.figure(figsize=(4, 2), dpi=300)
 plt.suptitle('CEBRA-behavior trained with target label',
              fontsize=5)
@@ -412,7 +528,6 @@ plt.show()
 
 
 #from some_functions import *
-
 
 
 

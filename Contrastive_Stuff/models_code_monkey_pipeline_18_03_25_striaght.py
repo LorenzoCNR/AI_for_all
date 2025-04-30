@@ -38,67 +38,67 @@ main_folder
 # need to declare:
 # 1) PROJECT root directory
 #  windows directories
-i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
+# i_dir='J:\\AI_PhD_Neuro_CNR\\Empirics\\GIT_stuff\\AI_for_all\\Contrastive_Stuff'
 
-#  ubuntu directories
-#i_dir=r'/media/zlollo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
+# #  ubuntu directories
+# #i_dir=r'/media/zlollo/21DB-AB79/AI_PhD_Neuro_CNR/Empirics/GIT_stuff/AI_for_all/Contrastive_Stuff/'
 
-os.chdir(i_dir)
-os.getcwd()
-from some_functions import *
-import json
-import copy
-import time
-import numpy as np
-import yaml
-import pickle
-import warnings
-import logging
-#import umap 
-import openTSNE
-import random
-import typing
-import joblib as jl
-import pandas as pd
-import numpy as np
-from matplotlib import pyplot as plt
-from torch import nn
-from torch.utils.data import DataLoader
-from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from sklearn.model_selection import ParameterGrid, train_test_split
-from sklearn.model_selection import ParameterGrid, ParameterSampler, RandomizedSearchCV
+# os.chdir(i_dir)
+# os.getcwd()
+# from some_functions import *
+# import json
+# import copy
+# import time
+# import numpy as np
+# import yaml
+# import pickle
+# import warnings
+# import logging
+# #import umap 
+# import openTSNE
+# import random
+# import typing
+# import joblib as jl
+# import pandas as pd
+# import numpy as np
+# from matplotlib import pyplot as plt
+# from torch import nn
+# from torch.utils.data import DataLoader
+# from sklearn.datasets import load_digits
+# from sklearn.model_selection import train_test_split
+# from sklearn.preprocessing import StandardScaler
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# import pandas as pd
+# from sklearn.model_selection import ParameterGrid, train_test_split
+# from sklearn.model_selection import ParameterGrid, ParameterSampler, RandomizedSearchCV
 
-from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
-import sklearn.metrics
-from scipy import stats
-import seaborn as sns
-from matplotlib.collections import LineCollection
-from matplotlib.markers import MarkerStyle
-from joblib import Parallel, delayed
-import torch
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-import cebra.datasets
-from cebra import CEBRA
-from cebra  import *
-from scipy import optimize as opt
+# from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+# import sklearn.metrics
+# from scipy import stats
+# import seaborn as sns
+# from matplotlib.collections import LineCollection
+# from matplotlib.markers import MarkerStyle
+# from joblib import Parallel, delayed
+# import torch
+# from statsmodels.stats.multicomp import pairwise_tukeyhsd
+# import cebra.datasets
+# from cebra import CEBRA
+# from cebra  import *
+# from scipy import optimize as opt
 
-from cebra.datasets.hippocampus import *
- # Sostituisci con una funzione specifica presente in some_functions.py
-from model_utils import *
-# Random Seeds
-torch.manual_seed(42)
-random.seed(42)
-np.random.seed(42)
+# from cebra.datasets.hippocampus import *
+#  # Sostituisci con una funzione specifica presente in some_functions.py
+# from model_utils import *
+# # Random Seeds
+# torch.manual_seed(42)
+# random.seed(42)
+# np.random.seed(42)
 
-# Config GPU
-torch.cuda.manual_seed(42)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+# # Config GPU
+# torch.cuda.manual_seed(42)
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = True
 
 # def prompt_for_paths_and_settings():
     
@@ -140,9 +140,9 @@ torch.backends.cudnn.benchmark = True
 def main():
     output_folder=default_output_dir
     # Get X, y and trial id
-    X = data['joint_passive_neural']
-    y_dir = data['joint_passive_trial']
-    trial_id = data['joint_passive_trial_id']
+    X = data['s_passive_neural']
+    y_dir = data['s_passive_trial']
+    trial_id = data['s_passive_trial_id']
     trial_id=trial_id.flatten()
     original_label_order = np.sort(np.unique(y_dir))
     
@@ -266,7 +266,7 @@ def main():
          l_r=model_params['learning_rate']
          n_h_u=model_params['num_hidden_units']
          temp=model_params['temperature']
-         default_title = f"CEBRA_cond2_resampled_shift5_mean_lr_{l_r}_nhu_{n_h_u}_temp{temp}.html"
+         default_title = f"S_CEBRA_cond3_resampled_shift5_sum_lr_{l_r}_nhu_{n_h_u}_temp{temp}.html"
          title_ = input(f"Inserisci il nome del file di output (default: {default_title}): ") or default_title
              
                  #print(type(model_params))
