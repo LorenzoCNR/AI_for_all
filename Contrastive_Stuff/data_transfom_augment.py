@@ -34,11 +34,13 @@ def first_difference(signal, c_t):
         pad = np.zeros((1,))
        
         if is_1d:
-            pad = np.zeros((1,))  # Se 1D, un solo zero
+            # Se 1D, un solo zero
+            pad = np.zeros((1,))  
             trial_diff = np.concatenate([pad, diff])
 
         else:
-            pad = np.zeros((1, trial.shape[1]))  # Se 2D, zero per ogni canale
+            # Se 2D, zero per ogni canale
+            pad = np.zeros((1, trial.shape[1]))  
             trial_diff = np.vstack([pad, diff])
         result.append(trial_diff)
     return result
@@ -57,7 +59,8 @@ def decompose_signal(signal, c_t, sampling_rate=1000):
          return ft_vals, freqs
          
          dominant_freq = freqs[np.argmax(np.abs(fft_vals[1:])) + 1]
-         dominant_period = int(1 / dominant_freq) if dominant_freq != 0 else len(signal)  # Evita divisione per 0
+          # Evita divisione per 0
+         dominant_period = int(1 / dominant_freq) if dominant_freq != 0 else len(signal) 
 
 
 ft, ff=decompose_signal(X, c_t)
@@ -67,11 +70,13 @@ ft, ff=decompose_signal(X, c_t)
          pad = np.zeros((1,))
         
          if is_1d:
-             pad = np.zeros((1,))  # Se 1D, un solo zero
+            # Se 1D, un solo zero
+             pad = np.zeros((1,))  
              trial_diff = np.concatenate([pad, diff])
 
          else:
-             pad = np.zeros((1, trial.shape[1]))  # Se 2D, zero per ogni canale
+            # Se 2D, zero per ogni canale
+             pad = np.zeros((1, trial.shape[1]))  
              trial_diff = np.vstack([pad, diff])
          result.append(trial_diff)
      return result
@@ -96,7 +101,8 @@ def rolling_skewness(signal, window_size=50):
     """Calcola la rolling skewness con padding iniziale."""
     skewness = np.array([skew(signal[i:i+window_size]) if i+window_size < len(signal) else 0 
                          for i in range(len(signal))])
-    pad = np.full(window_size, skewness[window_size])  # Padding replicando il primo valore valido
+     # Padding replicando il primo valore valido
+    pad = np.full(window_size, skewness[window_size]) 
     return np.concatenate([pad, skewness[window_size:]])
 # Funzione per il filtraggio passa-banda
 def bandpass_filter(data, lowcut, highcut, fs, order=4):

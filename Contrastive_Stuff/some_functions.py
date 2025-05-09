@@ -61,12 +61,10 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
     Configure paths for the project.
     
     Args:
-        change_dir (bool): If True, changes the current working 
-        directory to the project root.
+        change_dir (boolean): If True, changes the current working directory to the project root.
     
     Returns:
-        tuple: project_root, eeg_pipeline_path, default_output_dir,
-        default_input_dir
+        project_root, ..._pipeline_path, default_output_dir,  default_input_dir
     """
     # Setup logger
     logging.basicConfig(level=logging.INFO)
@@ -76,7 +74,7 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
     try:
         project_root = Path(__file__).resolve().parent
     except NameError:
-        # Fallback to cwd if __file__ is not available
+     
         project_root = Path(os.getcwd()) 
     logger.info(f"Project root resolved to: {project_root}")
 
@@ -105,10 +103,6 @@ def setup_paths(data_dir,sub_data,out_dir,pipe_path,change_dir=False):
         logger.info(f"Working directory changed to: {project_root}")
 
     return project_root, eeg_pipeline_path, default_output_dir, default_input_dir
-
-
-
-
 
 
 
@@ -183,12 +177,7 @@ def load_data(input_dir, name, file_format):
 
 
 
-
-
-
 ###################### CREATE TRIALS ACCORDING TO BEHAVIOR ####################
-
-       
 
 def create_rats_trial(behav_data):
     """Create trial identifiers based on behavioral data and track start
@@ -213,7 +202,6 @@ def create_rats_trial(behav_data):
         
     return trial_ids, c_t 
 
-#### RESAMPLIGN DATA FUNCTION 
 #### RESAMPLIGN DATA FUNCTION 
 def f_resample(datasets, trials, step, overlap, methods, mode="disjoint", normalization=False):  
     """
@@ -688,20 +676,6 @@ def plot_direction_averaged_embedding(z_, l_dir_, original_label_order, c_s,
 
    
 
-    # Define 2D circle positions for each direction (for visual reference)
-    # radius = 1.2
-    # direction_positions = [(radius * np.cos(np.deg2rad(360 * i / n_colors)),
-    #                         radius * np.sin(np.deg2rad(360 * i / n_colors)))
-    #                        for i in range(n_colors)]
-    # for i, (x, y) in enumerate(direction_positions):
-    #     fig.add_trace(go.Scatter3d(
-    #         x=[x], y=[y], z=[0],
-    #         mode="text",
-    #         text=[f"Dir {i+1}"],
-    #         textposition="middle center",
-    #         showlegend=False
-    #     ))
-
     # Loop over trajectories
     for idx, original_label in enumerate(original_label_order):
 
@@ -732,8 +706,6 @@ def plot_direction_averaged_embedding(z_, l_dir_, original_label_order, c_s,
     
         # Colore della traiettoria con Matplotlib colormap
         #color =cmap(idx)   # Stesso colore di Matplotlib
-        
-
         
         
         # Map color to the current trajectory
@@ -876,7 +848,7 @@ def explore_obj(obj):
     inclusa la dimensione o la lunghezza quando pertinente.
     
     Args:
-        obj: Oggetto da esplorare.
+        obj: Object to be "scanned"
         
     Output:
         Stampa gli attributi e i loro valori, con dimensioni o lunghezze se applicabile.
@@ -908,8 +880,6 @@ def explore_obj(obj):
             except Exception as e:
                 print(f"{attr}: (non accessibile, errore: {e})")
     print("-" * 50)
-
-
 
 # Esempio di utilizzo
 #esplora_oggetto(dataset_training)

@@ -1,4 +1,9 @@
- %%% Ref libreria python https://zenodo.org/records/12359299
+%%% Ref libreria python https://zenodo.org/records/12359299
+%%% parametrizzare blocchi
+%% label temporale
+%%% distinzione 
+
+
 
 % quando scrivo "per loro", intendo per Hasson e compagnia cantante
 
@@ -63,7 +68,8 @@ n_label=8;
 
 % frequenza campionamento (numero di punti al secondo...dopo aver
 % ricampionato abbiamo un quinto dei dati circa)
-fs_=round(1000/(trial_length/trial_len_res)); % per loro in hertz sono 512
+%  % per loro in hertz sono 512 (punit al secondo)
+fs_=round(1000/(trial_length/trial_len_res));
 
 % durata sessione in secondi (64 trials da 599 ms/bin...ridotti a 118 bin)
 % circa 38" totali
@@ -96,7 +102,7 @@ k_active_neural_cond1=k_cond_1_neural_active;
 
 %listener (nel nostro setting immagino sia la scimmia S che guarda K muovere
 % il braccio... condizione 2 quindi)
-s_passive_neural_cond2=s_cond_2_neural_passive;
+s_passive_neural_cond1=s_cond_1_neural_active;
 
 % numero elettrodi....da capire come usare e adattare questa info poichè 
 % nel mio   caso non sono lo stesso numero
@@ -125,7 +131,7 @@ mov_onsets=tt(onset_bin:trial_len_res:end)
 
 % embedding_size = 500; 
 embeddings_k_active_cond1 = k_cond_1_embed
-embeddings_s_passive_cond1 = s_cond_2_embed
+embeddings_s_passive_cond1 = s_cond_1_embed
 
 %% ALLINEAMENTO DATI NEURALI - DATI movimento Embedding %%%%%%%%%%%%%%%%
 % di fatto si analizza l'attività neurale in intervalli di tempo specifici
@@ -154,15 +160,14 @@ embeddings_s_passive_cond1 = s_cond_2_embed
 % torna comodo in quanto alla fine mi ritrovo con strutture analoghe per
 % dati neurali ed embedding
 
-% sono 40 momenti da 5 ms (0.20 sec)...è un po' come la window nel resampling
-block_size=40;
+% sono bin da 5 ms 
+% da cui se block size è 20 e shift block 10, sono blocchi da 100 ms con
+% overlap di 50 ms (ovviamente successivi all'onset del movimento)
+% 1-100ms, 51-150ms
+% ....
+block_size=20;
+shift_block=4 ;
 
-% 1-40, 9-48, 17-56 e così via (shift di 40 ms) che tradotto in 
-% tempo fa 1-200 ms, 41-240 ms e così via (ovviamente successivi all'onset
-% del movimento)
-shift_block=8 ;
-% questo si traduce in un numero massimo di blocchi per trial (resamplati)
-% (mettere un controllo)
 %max_blocks_per_trial_= floor((trial_len_res-n_onset-block_size)/shift_block)+1
 
 for i = 1:n_trial
@@ -204,9 +209,9 @@ for i = 1:n_trial
         start_blocco = blocchi_idx(j, 1);
         end_blocco = blocchi_idx(j, 2);
         dati_K{i}{j} = k_active_neural_cond1(start_blocco:end_blocco, :);
-        dati_S{i}{j} =s_passive_neural_cond2(start_blocco:end_blocco, :);
+        dati_S{i}{j} =s_passive_neural_cond1(start_blocco:end_blocco, :);
         manif_K_match{i}{j}=k_cond_1_embed(start_blocco:end_blocco, :);
-        manif_S_match{i}{j}=s_cond_2_embed(start_blocco:end_blocco,:)
+        manif_S_match{i}{j}=s_cond_1_embed(start_blocco:end_blocco,:)
     end
 end
 
@@ -237,6 +242,7 @@ end
 % [t_lag × #neuroni]
 % Tuttavia, anche gli embedding (X) hanno dimensione temporale: ogni X è
 % una cella per movimento, contenente [t_lag × dimensione_embedding]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% QUESTO 
 % Non volendo perdere la componente temporale degli embedding  invece di 
 % fare media temporale su Y e usare X statico, trasformiamo i dati in
 % formato long e cioè Per ogni lag e per ogni neurone, costrusico un vettore 
@@ -274,13 +280,24 @@ X_K= cell(n_blocchi,1);
 % ottenuto concatenando nel tempo le osservazioni neurali relative al neurone e
 % per ciascun movimento p, nel blocco/lag b.
 
+%%% se voglio i blocchi senza annullare la dimensione temporael devo
+%%% togliere il mean all'interno del ciclo quando formo le Y_K
+% ad ogni modo, quando faccio media sulla lunghezza del blocco mi ritrvo
+% con 64 osservazioni (per blocco per elettrodo) che sono le medie dei
+% blocchi per ogni movimento . 
+% se d'altra parte non faccio la media, per ogni trial (64) per ogni blocco
+% per ogni elettrodo, mi trovo con una colonna di osservazioni che ha come
+% ulteriore info la lungheza del blocco che rende il vettore lungo 64
+% osservaioni ognuna mpltoiplicata per la lunghezza del blocco (estesa)
+% quidni se i blocchi sono da 20 obs il vettore diventa
+% (n_trial*len_blocco)*1 (è una struttura longitudinale)
 
 for b = 1:n_blocchi
     for e = 1:n_channels_k
         Y_K{b,e} = [];
         %Y_l{b,e} = [];
         for p = 1:n_trial         
-            Y_K{b,e} = [Y_K{b,e}; (dati_K{p}{b}(:, e))];
+            Y_K{b,e} = [Y_K{b,e}; mean(dati_K{p}{b}(:, e))];
             %Y_l{b,e} = [Y_l{b,e}; mean(blocchi_dati{p}{b}(:, e))];
         end
     end
@@ -292,10 +309,10 @@ for b = 1:n_blocchi
         %Y_l{b,e} = [];
         for p = 1:n_trial
             
-            X_K{b,1} = [X_K{b,1}; (manif_K_match{p}{b})];
+            X_K{b,1} = [X_K{b,1}; mean(manif_K_match{p}{b})];
             %Y_l{b,e} = [Y_l{b,e}; mean(blocchi_dati{p}{b}(:, e))];
         end
-    end
+ end
 
 %%%%%%%%%%%%%%% SCIMMIA S
 Y_S= cell(n_blocchi, n_channels_s);
@@ -307,7 +324,7 @@ for b = 1:n_blocchi
         Y_S{b,e} = [];
         %Y_l{b,e} = [];
         for p = 1:n_trial
-            Y_S{b,e} = [Y_S{b,e}; (dati_S{p}{b}(:, e))];
+            Y_S{b,e} = [Y_S{b,e}; mean(dati_S{p}{b}(:, e))];
         end
     end
 end
@@ -319,20 +336,25 @@ for b = 1:n_blocchi
         %Y_l{b,e} = [];
         for p = 1:n_trial
             
-            X_S{b,1} = [X_S{b,1}; (manif_S_match{p}{b})];
+            X_S{b,1} = [X_S{b,1}; mean(manif_S_match{p}{b})];
         end
     end
 
 % Alla fine per ogni scimmia mi ritrovo con due strutture Y e X. La Y
-% contiene tanti vettori di dimensione (t_lag*movimenti)*1. In particolare 
+% contiene tanti vettori di dimensione #movimenti*1 (se mantenessi il tempo 
+% ogni vettore sarebbe espanso in formato long e avrebbe una dimensione 
+% t_lag*#movimenti*1)
+
+% In particolare 
 % facciamo una regressione per lag e per neurone come nel paper originale
-% la X contiene le manifold allineate nel tempo per blocco temporale. Quind
-% qui, diversamente dal paper, abbiamo una X che cambia nel tempo. In
+% la X contiene le manifold allineate nel tempo (anche qui ho fatto media 
+% sulla lungheza del blocco) per blocco temporale. Quindi
+% qui, diversamente dal paper, abbiamo una X che cambia nel tempo . In
 % particolare abbiamo una X diversa per ogni blocco. X di dimensione
-% (t_lag*movimenti)*dimensione output. 
+% (#movimenti)*dimensione output (otuput quando genero l'embedding)
 % quindi nel paper abbiamo una X su cui regrediamo 60*64 y (lag*neuroni)
-% noi abbiamo t_lag X (8 specificamente) e su ognuna regrediamo un numero y
-% pari al numero di neuroni per scimmia
+% noi abbiamo una X per blocco di dimensione #trial*output_dim
+% e su ognuna regrediamo un numero y pari al numero di neuroni per scimmia
 
 
 %% 
@@ -376,7 +398,7 @@ end
 
 % SCimmia S
 for b = 1:n_blocchi
-     % matrice di regressori (una per blocco)
+     % matrice di regressori (una per blocco, costante tra elettrodi) 
     X=X_S{b}
     I = eye(size(X,2)); 
     for s = 1:n_channels_s
@@ -426,12 +448,12 @@ end
 t_lag=length((dati_S{1}{1}(:, 1)))
 n_movements=n_trial
 % lunghezza delle y
-l_y=t_lag*n_movements
+l_y=n_movements
 
 
 % fattore comune più alto
 ff=gcd(t_lag, n_movements)
-factors=divisors(sym(ff))
+%factors=divisors(sym(ff))
 
 k_Fold = 4; % Numero di fold per la cross-validation
 % qui, diversamente dal paper. dove, come detto abbiamo solo una
@@ -517,7 +539,13 @@ for b = 1:n_blocchi
         
             X_train = X_(trainIdx, :);
             y_train = y_(trainIdx, :);
-    
+            X_test = X_(testIdx, :);
+            y_test = y_(testIdx, :);
+
+            % Stima dei coefficienti della Ridge Regression: (X'X + lambda*I) \
+            % X'y
+            % Matrice identità per la regolarizzazione
+            
             X_test = X_(testIdx, :);
             y_test = y_(testIdx, :);
 
@@ -544,9 +572,9 @@ r_threshold = 0.05;
 corr_s_cv_ = corrs_mean_s_cv > r_threshold;
 corr_s_cv = corrs_mean_s_cv .* corr_s_cv_ ;
 % Display risultati
-disp("Correlazione media per ogni canale e blocco - withih subject- speaker :");
+disp("Correlazione media per ogni canale e blocco - withih subject- K:");
 disp(corr_k_cv);
-disp("Correlazione media per ogni canale e blocco - withih subject- listener :");
+disp("Correlazione media per ogni canale e blocco - withih subject- S:");
 disp(corr_s_cv);
 
 
@@ -614,8 +642,8 @@ for b = 1:n_blocchi
             % Uso i coefficienti di K su S e viceversa
             % senza ristimarli!
 
-            y_hat_k = X_test*coefs_s_cv{b, e, k};
-            y_hat_s = X_test*coefs_k_cv_reduced{b, e, k};
+            y_hat_k = X_test_k*coefs_s_cv{b, e, k};
+            y_hat_s = X_test_s*coefs_k_cv_reduced{b, e, k};
 
             % Correlazione tra osservato (listener) e predetto (da speaker)
             corrs_inter_K_S(b, e, k) = corr(y_test_k, y_hat_k);
@@ -662,12 +690,15 @@ end
 
 
 % ora medio la matrice di correlazione across folds
-corr_matrix = mean(corr_matrix_folds, 3);
+%corr_matrix = mean(corr_matrix_folds, 3);
 
 %% per il plot
+%% da migliorare e magari mettere insieme alcuni lag
 % time range (vado a spanne...da perfezionare...sono circa 400 ms dopo il movimento)
-time_range = linspace(0, 400, n_lags); % Array dei tempi associati ai lag
-tick_indices = round(linspace(1, n_lags, 5)); % Seleziona 5 tick equidistanti
+ % Array dei tempi associati ai lag
+time_range = linspace(0, 400, n_lags);
+ % Seleziona 5 tick equidistanti
+tick_indices = round(linspace(1, n_lags, 5));
 tick_labels = arrayfun(@(x) sprintf('%.1fms', time_range(x)), tick_indices, 'UniformOutput', false);
 
 % Visualizzazione della heatmap
@@ -678,7 +709,7 @@ colorbar;
 axis square;
 xlabel('Lag S (s)');
 ylabel('Lag K (s)');
-title('Heatmap della correlazione lag-lag tra speaker e listener');
+title('Heatmap della correlazione lag-lag tra S e K');
 set(gca, 'XTick', tick_indices, 'XTickLabel', tick_labels, ...
          'YTick', tick_indices, 'YTickLabel', tick_labels);
 

@@ -28,14 +28,14 @@ cebra_behavior:
     device: 'cuda_if_available'
     conditional: 'time_delta'
     batch_size: 1024
-    max_iterations: 12000
+    max_iterations: 8000
     hybrid: False
     verbose: True
     time_offsets: 10
     output_dimension: 3
     learning_rate: 0.0001
-    num_hidden_units: 64
-    temperature: 1.266
+    num_hidden_units: 32
+    temperature: 1
   grid:
     max_iterations: [5000]
 

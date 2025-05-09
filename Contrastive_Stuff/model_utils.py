@@ -117,7 +117,7 @@ def run_model(model_type, params, data_, train_data=None, transform_data=None, s
     # Assign train data
     if train_data:
         X_train = data_.get(train_data[0])
-        y_train = data_.get(train_data[1]) if len(train_data) > 1 else None
+        y_train = data_.get(train_data[1:]) if len(train_data) > 1 else None
 
     # Check train data existence
     if X_train is None:
