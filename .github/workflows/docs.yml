@@ -1,4 +1,4 @@
-name: Build and deploy documentation
+name: Build and deploy project site
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,10 +38,18 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload documentation artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Assemble project site and documentation
+        shell: bash
+        run: |
+          mkdir -p _site/docs
+          cp -r site/. _site/
+          cp -r docs/_build/html/. _site/docs/
+          touch _site/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          path: docs/_build/html
+          path: _site
 
   deploy:
     environment:

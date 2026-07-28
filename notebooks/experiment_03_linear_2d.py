@@ -25,7 +25,7 @@ CONFIG = SyntheticTaskConfig(
     latent_dim=2,
     place_fraction=0.25,
     place_width=0.10,
-    cnn_epochs=10,
+    cnn_epochs=30,
 )
 CONFIG
 

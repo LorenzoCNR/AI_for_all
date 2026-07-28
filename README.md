@@ -3,26 +3,25 @@
 NeuroBridge is a research-oriented Python package for controlled neural
 time-series simulation and representation learning.
 
-The project generates a known task-level latent process, maps it into
-subject-specific neural populations, and tests whether representation-learning
-methods can recover the shared latent geometry from sparse spike counts.
+The project generates a known task-level latent process, maps it into a neural
+population, and tests whether representation-learning methods can recover the
+latent geometry from sparse spike counts.
 
-The current repository is a research prototype. Its first reproducible
-experiment compares PCA with a contrastively trained temporal CNN.
+The current repository is a research prototype. Its reproducible experiment
+suite compares PCA with a contrastively trained temporal CNN.
 
 ## Research Questions
 
 - Which properties of a known latent task survive stochastic neural emission?
-- Can different neural populations reveal the same task-level geometry?
 - Which linear and nonlinear encoders recover that geometry?
-- Can temporal delays between populations be recovered from learned
-  representations?
+- If two subjects perform the same task with a temporal response lag, can the
+  shared geometry and the imposed lag be recovered from their embeddings?
 
 ## Implemented Components
 
 - Circular and linear latent task generators.
 - Subject-specific loading matrices and neural tuning profiles.
-- Temporal lag between a shared task latent and a neural population.
+- Temporal lag simulation and lag-aware cross-subject alignment.
 - Spike-count emission with softplus rates, overdispersion, refractory effects,
   and bursting.
 - Centered temporal windows with trial, time, and condition metadata.
@@ -39,8 +38,8 @@ run.
 Python 3.11 is recommended.
 
 ```bash
-git clone <repository-url>
-cd Neuro_Bridge
+git clone https://github.com/LorenzoCNR/AI_for_all.git
+cd AI_for_all
 python -m pip install -e .
 ```
 
@@ -58,24 +57,20 @@ Python traceback.
 
 ## Quick Start
 
-The first experiment is intentionally divided into two commands:
+Open one of the four executable Jupyter notebooks in VS Code or Jupyter:
 
-```bash
-python notebooks/First_experiment_24_07.py
-python notebooks/first_experiment_model_24_07.py
-```
+- `notebooks/experiment_01_circular_3d.ipynb`
+- `notebooks/experiment_02_circular_5d.ipynb`
+- `notebooks/experiment_03_linear_position_direction.ipynb`
+- `notebooks/experiment_04_linear_enriched.ipynb`
 
-The first command creates the controlled simulation. The second loads that
-simulation, constructs identical windows for PCA and CNN1D, trains the CNN, and
-saves metrics, models, and figures.
+Each notebook explains the research question, configuration, generated
+matrices, model inputs, recovery metrics, and saved artifacts before executing
+the corresponding stage. Use **Run All** for complete reproduction or execute
+the cells individually while studying the workflow.
 
-See [notebooks/README.md](notebooks/README.md) for the complete experiment
-protocol, output structure, reference results, and interpretation.
-
-### Controlled task suite
-
-Four independent notebook-style scripts compare essential and enriched latent
-spaces:
+Equivalent `.py` mirrors are retained for terminal execution and automated
+checks:
 
 ```bash
 python notebooks/experiment_01_circular_3d.py
@@ -84,13 +79,47 @@ python notebooks/experiment_03_linear_2d.py
 python notebooks/experiment_04_linear_4d.py
 ```
 
-The linear experiments include Gaussian place fields whose preferred
-locations are distributed along the track. Each run saves its simulation,
-models, embeddings, metrics, and figures under `outputs/<experiment-name>/`.
+See [notebooks/EXPERIMENTS.md](notebooks/EXPERIMENTS.md) for the complete experiment
+protocol, output structure, reference results, and interpretation.
+
+### Linear-track place fields
+
+In the linear experiments, a subset of neurons is assigned a preferred
+position along the normalized track. Neuron `j` receives a Gaussian drive
+centered at its preferred position `mu_j`; its expected firing rate is highest
+near `mu_j` and decreases with distance from it. Different preferred positions
+make the population cover the route.
+
+This mechanism provides a known neuron-level ground truth. A later
+explainability analysis, for example SHAP or another feature-attribution
+method, can test whether an encoder or decoder assigns importance to the
+place-selective neurons that should be informative at a given track position.
+The current notebooks verify that the assigned selectivity is present in the
+simulated rates; they do not yet perform the attribution analysis.
+
+### Multi-subject extension
+
+NeuroBridge can map the same task-level latent process into two different
+neural populations. The subjects share the task geometry but may have
+different loading matrices, neuron counts, baselines, tuning mixtures, and
+stochastic spike realizations. One population can also receive a delayed
+version of the task process.
+
+After encoding both populations, lag-aware alignment compares candidate
+temporal shifts using only overlapping trial-time samples. For each candidate
+lag, one embedding is aligned to the other with Procrustes transformation and
+an alignment score is computed. In a controlled simulation, the best-scoring
+candidate can therefore be compared with the known imposed lag.
+
+This makes shared-geometry and lag recovery testable because the simulator
+provides their ground truth. The four notebooks currently validate the
+single-population foundations; a complete held-out multi-subject benchmark is
+the next experimental stage.
 
 An accompanying static project page is available at
 [site/index.html](site/index.html). It can be opened directly without a web
-server.
+server. The GitHub Pages workflow publishes this page at the repository Pages
+URL and places the Sphinx documentation under `/docs/`.
 
 Full searchable package documentation is built with Sphinx:
 
@@ -117,16 +146,15 @@ src/neurobridge/
 `-- viz/
 
 notebooks/
-|-- First_experiment_24_07.py
-|-- first_experiment_model_24_07.py
+|-- experiment_01_circular_3d.ipynb
+|-- experiment_02_circular_5d.ipynb
+|-- experiment_03_linear_position_direction.ipynb
+|-- experiment_04_linear_enriched.ipynb
 |-- experiment_01_circular_3d.py
 |-- experiment_02_circular_5d.py
 |-- experiment_03_linear_2d.py
 |-- experiment_04_linear_4d.py
-`-- README.md
-
-experiments/
-`-- encoder_baseline_suite.py
+`-- EXPERIMENTS.md
 
 tests/
 ```
@@ -144,29 +172,56 @@ Important modules:
 
 ```bash
 python -m unittest \
-  tests.test_similarity \
-  tests.test_learning_components \
-  tests.test_representation_eval \
-  tests.test_embedding_plots
+  discover -s tests -v
 ```
 
-The current verified result is 32 completed tests: 30 passed and 2 optional
-tests skipped.
+The standard-library test run executes 37 tests: 35 pass and 2 optional
+interactive Plotly tests are skipped.
 
 ## Current Scope
 
-The first experiment is an in-sample latent-recovery demonstration. It does not
-yet establish:
+Each controlled experiment generates 160 trials. The split is performed on
+complete trials:
 
-- generalization to held-out trials or conditions;
-- statistical reliability across random seeds;
-- recovery of the imposed cross-subject lag;
-- superiority over Poisson-aware latent-variable baselines;
-- biological realism beyond selected distributional checks.
+```text
+128 training trials -> fit PCA and CNN1D
+ 32 test trials     -> compute held-out recovery metrics
+```
 
-These are experimental questions, not assumed conclusions.
+Windows from a test trial never enter model fitting. The reported test metrics
+therefore measure recovery on new stochastic realizations from the same
+simulator and task distribution.
 
-## Generated Data
+This is meaningful held-out validation, but it is not yet evidence that the
+method:
 
-`outputs/`, private documentation, and local reference datasets are excluded
-from Git. Run the experiment locally to regenerate its artifacts.
+- is stable across many random seeds;
+- transfers to a different task, simulator, animal, or recording session;
+- generalizes to task conditions absent from training;
+- outperforms Poisson-aware or other neural latent-variable baselines;
+- reproduces every statistical property of biological spike trains.
+
+Those claims require multi-seed uncertainty estimates, explicit ablations,
+additional baselines, and real-data experiments.
+
+## Reproducibility And Outputs
+
+Running a notebook creates:
+
+```text
+outputs/<experiment-name>/
+|-- metrics.json
+|-- results.joblib
+|-- models/
+`-- figures/
+```
+
+`results.joblib` contains the simulated latent state, spike counts, metadata,
+train/test trial identifiers, embeddings, and metrics. The model directory
+contains fitted PCA and CNN1D parameters; the figure directory contains the
+trajectory and diagnostic plots.
+
+These generated files are not stored in Git because they are binary,
+relatively large, and reproducible from the versioned notebook and fixed
+random seed. Cloning the repository provides the code and configuration;
+running the selected notebook reconstructs its complete output directory.

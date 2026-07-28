@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Optional
 
 import torch
@@ -20,7 +21,8 @@ class TemporalWindowDataset(Dataset):
             time_id,
             global_time_id,
             trial_id,
-            labels_windows: Optional[object] = None):
+            labels_windows: Optional[object] = None,
+            extra_metadata: Optional[Mapping[str, object]] = None):
         self.X_windows = torch.as_tensor(X_windows, dtype=torch.float32)
         self.time_id = torch.as_tensor(time_id, dtype=torch.float32)
         self.global_time_id = torch.as_tensor(global_time_id, dtype=torch.float32)
@@ -35,6 +37,21 @@ class TemporalWindowDataset(Dataset):
             else:
                 self.labels_windows = labels_tensor.long()
 
+        self.extra_metadata = {}
+        if extra_metadata is not None:
+            for key, values in extra_metadata.items():
+                if key in {
+                    "x",
+                    "time_id",
+                    "global_time_id",
+                    "trial_id",
+                    "label",
+                }:
+                    raise ValueError(
+                        f"extra metadata key {key!r} is reserved"
+                    )
+                self.extra_metadata[key] = torch.as_tensor(values)
+
         n_windows = self.X_windows.shape[0]
         if self.time_id.shape[0] != n_windows:
             raise ValueError("time_id must have one value per window")
@@ -44,6 +61,11 @@ class TemporalWindowDataset(Dataset):
             raise ValueError("trial_id must have one value per window")
         if self.labels_windows is not None and self.labels_windows.shape[0] != n_windows:
             raise ValueError("labels_windows must have one value per window")
+        for key, values in self.extra_metadata.items():
+            if values.shape[0] != n_windows:
+                raise ValueError(
+                    f"extra metadata {key!r} must have one value per window"
+                )
 
     def __len__(self):
         return self.X_windows.shape[0]
@@ -58,5 +80,8 @@ class TemporalWindowDataset(Dataset):
 
         if self.labels_windows is not None:
             sample["label"] = self.labels_windows[idx]
+
+        for key, values in self.extra_metadata.items():
+            sample[key] = values[idx]
 
         return sample

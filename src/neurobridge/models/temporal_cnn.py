@@ -317,25 +317,21 @@ class TemporalCNNEncoder(nn.Module):
 
         padding = kernel_size // 2
 
-        layers: list[nn.Module] = []
-
-        # First convolution maps neural features to the hidden channels.
-        layers.extend(
-            [
-                nn.Conv1d(
-                    in_channels=n_features,
-                    out_channels=hidden_dim,
-                    kernel_size=kernel_size,
-                    padding=padding,
-                ),
-                nn.GELU(),
-            ]
+        self.input_layer = nn.Sequential(
+            nn.Conv1d(
+                in_channels=n_features,
+                out_channels=hidden_dim,
+                kernel_size=kernel_size,
+                padding=padding,
+            ),
+            nn.GELU(),
         )
 
-        # Remaining convolutions preserve both hidden channels and time.
-        for _ in range(n_layers - 1):
-            layers.extend(
-                [
+        # Residual temporal blocks preserve local information while increasing
+        # the receptive field. All convolutions keep the window length fixed.
+        self.residual_blocks = nn.ModuleList(
+            [
+                nn.Sequential(
                     nn.Conv1d(
                         in_channels=hidden_dim,
                         out_channels=hidden_dim,
@@ -344,10 +340,10 @@ class TemporalCNNEncoder(nn.Module):
                     ),
                     nn.GELU(),
                     nn.Dropout(dropout),
-                ]
-            )
-
-        self.encoder = nn.Sequential(*layers)
+                )
+                for _ in range(n_layers - 1)
+            ]
+        )
 
         # Global average pooling converts every temporal window into one
         # hidden vector. This means the contrastive loss receives one
@@ -368,7 +364,9 @@ class TemporalCNNEncoder(nn.Module):
         # (B, T, N) -> (B, N, T)
         x_channels_first = x.transpose(1, 2)
 
-        hidden_sequence = self.encoder(x_channels_first)
+        hidden_sequence = self.input_layer(x_channels_first)
+        for block in self.residual_blocks:
+            hidden_sequence = hidden_sequence + block(hidden_sequence)
 
         # (B, hidden_dim, T) -> (B, hidden_dim, 1)
         pooled = self.pool(hidden_sequence)

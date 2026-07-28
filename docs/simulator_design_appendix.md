@@ -857,32 +857,13 @@ TemporalWindowDataset
 -> train_epoch
 ```
 
-**Limitation.** This stack is only the first operational baseline. It still
-needs systematic evaluation against PCA, supervised contrastive learning, and
-other time-series encoders.
+**Limitation.** The controlled experiments currently validate PCA and CNN1D.
+Systematic comparisons with the other available time-series encoders remain
+future experiments.
 
-The current baseline script is:
-
-```text
-experiments/encoder_baseline_suite.py
-```
-
-It compares PCA, CNN, MLP, LSTM, and Transformer encoders on the same simulated
-shared-latent task. The main reported metrics are Procrustes R2 and RSA
-distance-geometry correlations against the known latent state.
-
-The suite also saves interactive normalized 3D sphere plots:
-
-```text
-embedding scatter colored by condition
-condition-averaged trajectories on the unit sphere
-```
-
-Additional diagnostic plots are saved for:
-
-```text
-2D Euclidean embedding views
-condition centroids and dispersion
+The reproducible entry points are the four notebooks under `notebooks/`.
+They report Procrustes R2 and RSA distance-geometry correlations against the
+known latent state and save trial-averaged trajectory diagnostics.
 PCA component pairs
 cross-subject best-lag Procrustes alignment
 ```

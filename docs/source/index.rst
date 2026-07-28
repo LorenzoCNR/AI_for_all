@@ -23,7 +23,7 @@ Start here
 * :doc:`quickstart` runs the first controlled experiment.
 * :doc:`concepts` defines the generative and learning objects.
 * :doc:`experiments` presents the four baseline experiments.
-* :doc:`demos` links each executable notebook-style script.
+* :doc:`demos` links each executable Jupyter notebook.
 * :doc:`api` is generated from the package docstrings.
 
 .. toctree::

@@ -39,6 +39,13 @@ def _condition_color(label_index, n_labels):
     return f"rgb({color[0]*255:.0f},{color[1]*255:.0f},{color[2]*255:.0f})"
 
 
+def _trace_label(label):
+    """Keep descriptive phase labels and prefix numeric conditions."""
+    if isinstance(label, (str, np.str_)):
+        return str(label)
+    return f"cond {label}"
+
+
 def _make_unit_sphere_trace(opacity=0.08):
     u = np.linspace(0, 2 * np.pi, 50)
     v = np.linspace(0, np.pi, 50)
@@ -99,7 +106,7 @@ def plot_embedding_sphere(
             z=embedding[mask, 2],
             mode="markers",
             marker=dict(color=hex_color, size=marker_size, opacity=0.75),
-            name=f"cond {label}",
+            name=_trace_label(label),
         ))
 
     fig.update_layout(
@@ -181,7 +188,7 @@ def plot_condition_trajectories_sphere(
             mode="lines+markers",
             line=dict(color=hex_color, width=4),
             marker=dict(size=3, color=hex_color),
-            name=f"cond {label}",
+            name=_trace_label(label),
         ))
         fig.add_trace(go.Scatter3d(
             x=[trajectory[0, 0]],
@@ -226,6 +233,7 @@ def plot_embedding_2d(
         name,
         title=None,
         dims=(0, 1),
+        axis_labels=None,
         marker_size=4,
         show=False,
         write_html=True):
@@ -244,6 +252,10 @@ def plot_embedding_2d(
         raise ValueError("labels must have one value per embedding sample")
     if max(dims) >= embedding.shape[1]:
         raise ValueError("requested dims exceed embedding dimensionality")
+    if axis_labels is None:
+        axis_labels = (f"dim {dims[0] + 1}", f"dim {dims[1] + 1}")
+    if len(axis_labels) != 2:
+        raise ValueError("axis_labels must contain exactly two labels")
 
     os.makedirs(output_folder, exist_ok=True)
     fig = go.Figure()
@@ -257,19 +269,163 @@ def plot_embedding_2d(
             y=embedding[mask, dims[1]],
             mode="markers",
             marker=dict(color=hex_color, size=marker_size, opacity=0.75),
-            name=f"cond {label}",
+            name=_trace_label(label),
         ))
 
     fig.update_layout(
         title=title or name,
-        xaxis=dict(title=f"dim {dims[0] + 1}", scaleanchor="y", scaleratio=1),
-        yaxis=dict(title=f"dim {dims[1] + 1}"),
+        xaxis=dict(title=axis_labels[0], scaleanchor="y", scaleratio=1),
+        yaxis=dict(title=axis_labels[1]),
         legend=dict(title="Condition"),
     )
 
     output_html = os.path.join(output_folder, name)
     if write_html:
         fig.write_html(output_html)
+    if show:
+        fig.show(renderer="browser")
+    return fig
+
+
+def plot_embedding_3d(
+        embedding,
+        labels,
+        output_folder,
+        name,
+        title=None,
+        dims=(0, 1, 2),
+        axis_labels=None,
+        marker_size=3,
+        show=False,
+        write_html=True):
+    """Plot an unnormalized 3D embedding colored by condition."""
+    embedding = np.asarray(embedding)
+    labels = np.asarray(labels).reshape(-1)
+
+    if embedding.ndim != 2:
+        raise ValueError("embedding must be a 2D array")
+    if labels.shape[0] != embedding.shape[0]:
+        raise ValueError("labels must have one value per embedding sample")
+    if len(dims) != 3 or max(dims) >= embedding.shape[1]:
+        raise ValueError("dims must select three available dimensions")
+    if axis_labels is None:
+        axis_labels = tuple(f"dim {dim + 1}" for dim in dims)
+    if len(axis_labels) != 3:
+        raise ValueError("axis_labels must contain exactly three labels")
+
+    os.makedirs(output_folder, exist_ok=True)
+    fig = go.Figure()
+    unique_labels = np.unique(labels)
+
+    for idx, label in enumerate(unique_labels):
+        mask = labels == label
+        color = _condition_color(idx, len(unique_labels))
+        fig.add_trace(go.Scatter3d(
+            x=embedding[mask, dims[0]],
+            y=embedding[mask, dims[1]],
+            z=embedding[mask, dims[2]],
+            mode="markers",
+            marker=dict(color=color, size=marker_size, opacity=0.65),
+            name=_trace_label(label),
+        ))
+
+    fig.update_layout(
+        title=title or name,
+        scene=dict(
+            xaxis_title=axis_labels[0],
+            yaxis_title=axis_labels[1],
+            zaxis_title=axis_labels[2],
+            aspectmode="data",
+        ),
+        legend=dict(title="Condition"),
+    )
+    if write_html:
+        fig.write_html(os.path.join(output_folder, name))
+    if show:
+        fig.show(renderer="browser")
+    return fig
+
+
+def plot_condition_trajectories_3d(
+        embedding,
+        labels,
+        trial_id,
+        time_id,
+        output_folder,
+        name,
+        title=None,
+        dims=(0, 1, 2),
+        axis_labels=None,
+        show=False,
+        write_html=True):
+    """Plot unnormalized condition-averaged trajectories in 3D."""
+    embedding = np.asarray(embedding)
+    labels = np.asarray(labels).reshape(-1)
+    trial_id = np.asarray(trial_id).reshape(-1)
+    time_id = np.asarray(time_id).reshape(-1)
+
+    n_samples = embedding.shape[0] if embedding.ndim == 2 else -1
+    if n_samples < 0:
+        raise ValueError("embedding must be a 2D array")
+    if any(len(values) != n_samples for values in (labels, trial_id, time_id)):
+        raise ValueError(
+            "labels, trial_id, and time_id must match embedding length"
+        )
+    if len(dims) != 3 or max(dims) >= embedding.shape[1]:
+        raise ValueError("dims must select three available dimensions")
+    if axis_labels is None:
+        axis_labels = tuple(f"dim {dim + 1}" for dim in dims)
+    if len(axis_labels) != 3:
+        raise ValueError("axis_labels must contain exactly three labels")
+
+    os.makedirs(output_folder, exist_ok=True)
+    fig = go.Figure()
+    trajectories = condition_averaged_trajectories(
+        embedding,
+        labels,
+        time_id,
+    )
+
+    for idx, (label, trajectory) in enumerate(trajectories.items()):
+        color = _condition_color(idx, len(trajectories))
+        fig.add_trace(go.Scatter3d(
+            x=trajectory[:, dims[0]],
+            y=trajectory[:, dims[1]],
+            z=trajectory[:, dims[2]],
+            mode="lines+markers",
+            line=dict(color=color, width=5),
+            marker=dict(size=3, color=color),
+            name=_trace_label(label),
+        ))
+        fig.add_trace(go.Scatter3d(
+            x=[trajectory[0, dims[0]]],
+            y=[trajectory[0, dims[1]]],
+            z=[trajectory[0, dims[2]]],
+            mode="markers",
+            marker=dict(size=6, color=color, symbol="circle"),
+            showlegend=False,
+        ))
+        fig.add_trace(go.Scatter3d(
+            x=[trajectory[-1, dims[0]]],
+            y=[trajectory[-1, dims[1]]],
+            z=[trajectory[-1, dims[2]]],
+            mode="markers",
+            marker=dict(size=6, color="black", symbol="x"),
+            showlegend=False,
+        ))
+
+    fig.update_layout(
+        title=title or name,
+        scene=dict(
+            xaxis_title=axis_labels[0],
+            yaxis_title=axis_labels[1],
+            zaxis_title=axis_labels[2],
+            aspectmode="data",
+        ),
+        legend=dict(title="Condition"),
+    )
+    if write_html:
+        fig.write_html(os.path.join(output_folder, name))
     if show:
         fig.show(renderer="browser")
     return fig
@@ -284,6 +440,7 @@ def plot_condition_trajectories_2d(
         name,
         title=None,
         dims=(0, 1),
+        axis_labels=None,
         show=False,
         write_html=True):
     """
@@ -301,32 +458,29 @@ def plot_condition_trajectories_2d(
         raise ValueError("labels, trial_id, and time_id must match embedding length")
     if max(dims) >= embedding.shape[1]:
         raise ValueError("requested dims exceed embedding dimensionality")
+    if axis_labels is None:
+        axis_labels = (f"dim {dims[0] + 1}", f"dim {dims[1] + 1}")
+    if len(axis_labels) != 2:
+        raise ValueError("axis_labels must contain exactly two labels")
 
     os.makedirs(output_folder, exist_ok=True)
     fig = go.Figure()
 
-    unique_labels = np.unique(labels)
-    unique_times = np.unique(time_id)
+    trajectories = condition_averaged_trajectories(
+        embedding,
+        labels,
+        time_id,
+    )
 
-    for idx, label in enumerate(unique_labels):
-        trajectory = []
-        for time_value in unique_times:
-            mask = (labels == label) & (time_id == time_value)
-            if np.any(mask):
-                trajectory.append(embedding[mask].mean(axis=0))
-
-        if len(trajectory) < 2:
-            continue
-
-        trajectory = np.asarray(trajectory)
-        hex_color = _condition_color(idx, len(unique_labels))
+    for idx, (label, trajectory) in enumerate(trajectories.items()):
+        hex_color = _condition_color(idx, len(trajectories))
         fig.add_trace(go.Scatter(
             x=trajectory[:, dims[0]],
             y=trajectory[:, dims[1]],
             mode="lines+markers",
             line=dict(color=hex_color, width=3),
             marker=dict(size=4, color=hex_color),
-            name=f"cond {label}",
+            name=_trace_label(label),
         ))
         fig.add_trace(go.Scatter(
             x=[trajectory[0, dims[0]]],
@@ -345,8 +499,8 @@ def plot_condition_trajectories_2d(
 
     fig.update_layout(
         title=title or name,
-        xaxis=dict(title=f"dim {dims[0] + 1}", scaleanchor="y", scaleratio=1),
-        yaxis=dict(title=f"dim {dims[1] + 1}"),
+        xaxis=dict(title=axis_labels[0], scaleanchor="y", scaleratio=1),
+        yaxis=dict(title=axis_labels[1]),
         legend=dict(title="Condition"),
     )
 
@@ -356,6 +510,36 @@ def plot_condition_trajectories_2d(
     if show:
         fig.show(renderer="browser")
     return fig
+
+
+def condition_averaged_trajectories(
+        embedding,
+        labels,
+        time_id):
+    """Return one time-ordered mean trajectory for each condition."""
+    embedding = np.asarray(embedding)
+    labels = np.asarray(labels).reshape(-1)
+    time_id = np.asarray(time_id).reshape(-1)
+
+    if embedding.ndim != 2:
+        raise ValueError("embedding must be a 2D array")
+    if labels.shape[0] != embedding.shape[0]:
+        raise ValueError("labels must have one value per embedding sample")
+    if time_id.shape[0] != embedding.shape[0]:
+        raise ValueError("time_id must have one value per embedding sample")
+
+    unique_times = np.unique(time_id)
+    trajectories = {}
+    for label in np.unique(labels):
+        trajectory = [
+            embedding[(labels == label) & (time_id == time_value)].mean(axis=0)
+            for time_value in unique_times
+            if np.any((labels == label) & (time_id == time_value))
+        ]
+        if len(trajectory) >= 2:
+            trajectories[label] = np.asarray(trajectory)
+
+    return trajectories
 
 
 def plot_condition_centroids_2d(
@@ -423,7 +607,7 @@ def plot_condition_centroids_2d(
             marker=dict(color=hex_color, size=14, line=dict(color="black", width=1)),
             text=[f"{label}"],
             textposition="top center",
-            name=f"cond {label}",
+            name=_trace_label(label),
         ))
 
     if len(centroid_x) > 2:

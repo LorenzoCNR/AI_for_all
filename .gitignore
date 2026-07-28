@@ -28,13 +28,15 @@ inputs/
 Hasson_pipeline/*.mat
 Hasson_pipeline/*.asv
 
-# Local reference datasets. Track only metadata or download instructions until
-# provenance and redistribution terms have been documented.
-data/**/*.joblib
+# Local reference datasets
+data/
 
 # Personal archive, old experiments, private material
-_private_archive/
+_private_Archive/
 docs/internal_python_guide/
+
+# Generated technical-document renders
+docs/spike_simulator_generative_model*.pdf
 
 # LaTeX build artifacts
 *.aux

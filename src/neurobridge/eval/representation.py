@@ -4,7 +4,6 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import pearsonr, spearmanr
 from sklearn.decomposition import PCA
-from sklearn.metrics import r2_score
 
 
 def center_scale(X, eps=1e-8):
@@ -54,7 +53,13 @@ def procrustes_r2(embedding, latent):
 
     aligned, _ = procrustes_align(embedding, latent)
     latent_scaled = center_scale(latent)
-    return float(r2_score(latent_scaled, aligned, multioutput="uniform_average"))
+    residual_sum_squares = np.square(
+        latent_scaled - aligned
+    ).sum()
+    total_sum_squares = np.square(latent_scaled).sum()
+    if total_sum_squares <= 1e-12:
+        return float("nan")
+    return float(1.0 - residual_sum_squares / total_sum_squares)
 
 
 def distance_geometry_correlation(embedding, latent, metric="euclidean", method="spearman"):

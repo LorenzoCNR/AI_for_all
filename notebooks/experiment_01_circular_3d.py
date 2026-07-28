@@ -22,7 +22,7 @@ CONFIG = SyntheticTaskConfig(
     name="experiment_01_circular_3d",
     condition_mode="circular",
     latent_dim=3,
-    cnn_epochs=10,
+    cnn_epochs=30,
 )
 CONFIG
 

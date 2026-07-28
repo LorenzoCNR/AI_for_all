@@ -9,10 +9,7 @@ Install the package in editable mode and run the verified test suite:
 .. code-block:: console
 
    python -m pip install -e .
-   python -m unittest tests.test_similarity ^
-       tests.test_learning_components ^
-       tests.test_representation_eval ^
-       tests.test_embedding_plots
+   python -m unittest discover -s tests -v
 
 Experiment contributions
 ------------------------

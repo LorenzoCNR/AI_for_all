@@ -537,25 +537,11 @@ X_windows
 NeuroBridge keeps a small, inspectable implementation so that assumptions about
 distances, similarities, and losses can be modified directly.
 
-## Current Baseline Suite
+## Current Controlled Experiments
 
-The script:
-
-```text
-experiments/encoder_baseline_suite.py
-```
-
-runs a first conference-oriented comparison:
-
-```text
-PCA baseline
-TemporalCNNEncoder
-TemporalMLPEncoder
-TemporalLSTMEncoder
-TemporalTransformerEncoder
-```
-
-All neural encoders use the same soft structured contrastive objective.
+The four executable notebooks under `notebooks/` compare PCA and CNN1D on
+circular and linear tasks with essential and enriched latent states. The CNN
+uses the soft structured contrastive objective.
 
 Reported metrics:
 
@@ -566,26 +552,22 @@ RSA Pearson correlation
 cross-subject lag-aware Procrustes alignment
 ```
 
-Outputs are saved to:
+Each notebook saves outputs under:
 
 ```text
-outputs/baselines/latent_recovery_results.csv
-outputs/baselines/cross_subject_lag_alignment.csv
-outputs/baselines/figures/*.html
+outputs/<experiment-name>/
 ```
 
-The figure outputs include normalized 3D spherical embeddings and
-condition-averaged trajectories colored by movement direction. They also
-include Euclidean 2D diagnostics, PCA component-pair plots, condition centroids
-with dispersion, and cross-subject Procrustes alignment plots at the estimated
-best lag.
+The figures include known latent trajectories, native PCA coordinates, native
+CNN coordinates, and task-specific diagnostics such as linear-track place
+fields.
 
 Current baseline windowing defaults are:
 
 ```text
 window_size = 10
-stride = 2
-time_mode = absolute
+stride = 1
+centered padding = enabled
 ```
 
 The absolute time mode is used for lag-aware subject comparison. With the

@@ -1,21 +1,27 @@
 Quickstart
 ==========
 
-Run the essential circular experiment:
+Open the primary documented experiment:
 
-.. code-block:: console
+.. code-block:: text
 
-   python notebooks/experiment_01_circular_3d.py
+   notebooks/experiment_01_circular_3d.ipynb
 
-This command performs the complete controlled pipeline:
+Run its cells in order in VS Code or Jupyter. The notebook performs the
+complete controlled pipeline without hiding it behind one experiment-wide
+function:
 
 1. generate 160 trials of a three-dimensional circular task latent;
-2. map the latent into a 100-neuron population;
-3. emit sparse spike counts;
-4. construct one centered 10-bin window per trial time;
-5. fit PCA and CNN1D;
-6. compare both embeddings with the known latent;
-7. save models, figures, metrics, and arrays.
+2. inspect ``Z`` and the task-state variables;
+3. construct ``B`` and inspect the neural tuning mixture;
+4. calculate ``u``, ``lambda``, and stochastic counts ``X``;
+5. construct one centered 10-bin window per trial time;
+6. split complete trials into fitting and test sets;
+7. fit PCA directly;
+8. inspect one batch-wise soft target matrix;
+9. construct and train CNN1D;
+10. compare both embeddings with the known latent;
+11. save models, figures, metrics, and arrays.
 
 Artifacts are written to:
 
@@ -28,3 +34,9 @@ Artifacts are written to:
 
 ``outputs`` is intentionally ignored by Git because all artifacts can be
 regenerated from the experiment configuration.
+
+The equivalent non-interactive command is:
+
+.. code-block:: console
+
+   python notebooks/experiment_01_circular_3d.py

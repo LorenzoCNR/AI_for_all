@@ -1,30 +1,29 @@
-Demo notebooks
-==============
+Experiment notebooks
+====================
 
-The experiment files use ``# %%`` cells. They can be executed as normal Python
-scripts or interactively in VS Code.
+The ``.ipynb`` files are the primary documented entry points. Each contains
+explanatory Markdown and runnable cells. Matching ``.py`` mirrors are retained
+for terminal execution.
+
+The notebooks expose latent generation, neural mapping, spike emission,
+windowing, trial splitting, PCA, soft-target construction, CNN training,
+encoding, evaluation, and saving as separate cells. They do not call the
+all-in-one experiment runner.
 
 Circular task
 -------------
 
-``notebooks/experiment_01_circular_3d.py``
+``notebooks/experiment_01_circular_3d.ipynb``
    Essential position and progress latent.
 
-``notebooks/experiment_02_circular_5d.py``
+``notebooks/experiment_02_circular_5d.ipynb``
    Adds velocity and trial context.
 
 Linear track
 ------------
 
-``notebooks/experiment_03_linear_2d.py``
+``notebooks/experiment_03_linear_position_direction.ipynb``
    Position, direction, and localized place fields.
 
-``notebooks/experiment_04_linear_4d.py``
+``notebooks/experiment_04_linear_enriched.ipynb``
    Adds velocity and context while retaining place fields.
-
-Multisubject experiment
------------------------
-
-``notebooks/First_experiment_24_07.py`` generates the historical multisubject
-simulation. ``notebooks/first_experiment_model_24_07.py`` fits its baseline
-encoders and preserves that experiment as a separate reproducibility record.
