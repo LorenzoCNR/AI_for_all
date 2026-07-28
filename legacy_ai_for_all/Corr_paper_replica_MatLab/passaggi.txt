@@ -1,0 +1,40 @@
+%%% Termini e metodi
+ISC (correlazione inter soggetto) Misura la correlazione temporale tra le risposte neurali dei soggetti (si usa in neuroimaging) e serve a valutare quanto si assomigliano i pattern di attività cerebrale tra diversi soggetti espsoti allo stesso stimolo. Se di fronte allo stesso stimolo i cervelli si attivano in modo analogo, ISC alta e viceversa. 
+Tecnicamnte si calcolano correlazioni tra soggetti e canali
+
+
+%%% abbiamo dati neurali e dati legati alle parole. 
+%%% ora i dati neurali sono campionati a 512hz...se registriamo un minuto di conversazione abbiamo 512x60x(numero elettrodi)...fxTxN
+
+
+
+Nel paper la chiave è il fatto che l'embedding LLM è contestuale...verosimilmente il cervello e la macchina (LLM) condividono dei principi computazionali per comprendere il linguaggio. 
+Di fatto gli autori usano lo stesso insieme di embedding contestuali per allenare dei modelli di encoding che predicano l'attività neurale durante l'attività cerebrale
+Il fatto che l'embedding sia contestuale comporta che parole uguali avranno embedding diversi (il contesto cambia sempre in qualche modo sia in senso stretto, stessa parla sgnificato diverso, sia stessosignificato ma contesto o espressioni o altro dello interlocutore diverso). Tutto ciò avviene per l'embedding non è statico!  Chiaro che se l'embedding della parola 1 in un istante riesce a predire l'attività registrata nell'istante successivo, allora possiamo dire che viene l'embeddign stesso sta mappando cosa rappresenta quella parola nel  cervello in quel momento. 
+L'aspetto chiave non è solo che l'ascoltatore si attivi dopo ma quanto e come questa attivazione sia correlata a quella dello speaker parola per parola, nello stesso spazio matematico. 
+Un embedding per parola (da loro è 600 dimensionale)
+
+si fa un modello di  regressione ridge che cerca di predire l'attività neurale di speaker e listener. 
+Se le previsioni danno buoni risultati e il modello scopre che la rapprensentazione X dello speaker a -tt sec. "coincide" con quella del listener a +tt secs. allora soignficia che lo stesso contenuto si manifesta prima nel cervello dello speaker e poi del listener
+ (domanda...ma il conetnuto non è sopra il tempo?)
+
+
+5 coppie di pazienti epilettici. 
+
+Siregistra attivtà cerbrale con elettorcorticografia. 
+Si vuole allieneare l'attività cerebrale tra soggetto che parla e soggetto che ascolta ad uno spazio embedding condiviso da un modello di linguaggio. 
+Siccome LLM sono sensibili al contesto (in  teoria), ci permettono di tracciare lo scambio di info linguistiche parola per parola tra un cervello e l'altro. Il contenuto linguistico emerge nel cervello dello speaker e subito dopo lo ritroviamo nel cervello dello ascoltatore dopo che la parola è stata pronunciata. Il modello di embedding contestuale cattura meglio l'allineamento neurale parola per parola tra i due agenti. Da cui i modelli di linguaggio possono essere cinsiderati dei modelli numerici validi per rappresentare come l'info si presenta nel cervello degli individui e venga scambiata per comunicare i pensieri da agente ad agente
+
+
+
+
+
+
+% osservazioni
+%%% le registrazioni vocali hanno frequenza maggiore e post prerocessing sono allineate(temporalmente) ai dati neurali da cui 
+% avremo un subsampling...inotre,per ogni parola, si prende un intervallo intorno all'onset di piu/meno 4sec. (se la parola inizia a 5 secondi, si prende un intervallo da 1 a 9...le parole che sono agli estremi hanno un padding (replicato...usano quindi il primo o l'ultimo valore rispettivamente dopo o prima del padding stesso); ogni finestra di otto secondi viene segmentata in microfinestre (b=bins) di 62.5ms quindi 129 finestre per parola....P=#parole (ipotizziamo 150 parole al minuto).
+Le parole sono inoltre proiettate con gpt2 in un emebedding di 1600 elementi (dimensione d) da cui ogni parole avra' una dimensione 129*1600 (la dimensione colonna si ripete per tutte le righe). 
+La matrice X con tutte le parole del dialogo del minuto sara' 150x129x1600 (Pxbxd)....
+A questo punto, si fanno Nxbins regressioni (una per elettrodo per bin)...quindi tante quanti sono gli elettrodi e quanti i lag. 
+Con ogni regressione stimo per ogni parola l'effetto a quel bin una matrice di 1600 parametri...ogni peso rappresenta l'effetto di ciascuna feature di gpt2 sul segnaloe neurale in quel momento in quel punto del cervello. (Verosimilmente se un peso e' alto significa che che quella particolare dimensione dell'embedding di gpt2 ha un forte impatto sull'attivita' cerebrale in quel lag ed elettrodo.)... i pesi vengono poi ottimizzati con cross validation nested. 
+
