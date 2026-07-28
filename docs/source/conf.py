@@ -11,8 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 project = "NeuroBridge"
-author = "NeuroBridge contributors"
-copyright = "2026, NeuroBridge contributors"
+author = "Lorenzo Ognibeni"
+copyright = "2026, Lorenzo Ognibeni"
 release = "0.0.1"
 
 extensions = [
