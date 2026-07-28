@@ -10,6 +10,24 @@ latent geometry from sparse spike counts.
 The current repository is a research prototype. Its reproducible experiment
 suite compares PCA with a contrastively trained temporal CNN.
 
+## Documentation
+
+The complete documentation is readable directly from the repository; the
+project website is not required:
+
+- [Documentation index](docs/README.md)
+- [Generative model](docs/01_GENERATIVE_MODEL.md)
+- [Data and temporal windows](docs/02_DATA_AND_WINDOWS.md)
+- [Learning objectives and loss](docs/03_LEARNING_OBJECTIVES.md)
+- [PCA and temporal encoders](docs/04_ENCODERS.md)
+- [Evaluation, lag, and multiple subjects](docs/05_EVALUATION_AND_MULTISUBJECT.md)
+- [Experiments, results, and limitations](docs/06_EXPERIMENTS_AND_LIMITATIONS.md)
+- [Cell-by-cell notebook guide](notebooks/EXPERIMENTS.md)
+
+The `.rst` files under `docs/source/` are reStructuredText build sources for
+the searchable Sphinx website. They are not required reading: the numbered
+Markdown documents above are the canonical scientific explanation.
+
 ## Research Questions
 
 - Which properties of a known latent task survive stochastic neural emission?
@@ -32,6 +50,33 @@ suite compares PCA with a contrastively trained temporal CNN.
 The validated experiment suite currently uses PCA and CNN1D. Other encoders
 are available as research components but are not part of the minimal verified
 run.
+
+## Learning Objective In One View
+
+For every minibatch, NeuroBridge converts temporal and task metadata into a
+weighted pairwise distance:
+
+```text
+D_ij =
+    (w_time T_ij + w_condition sqrt(s_i s_j) I[c_i != c_j])
+    / (w_time + w_condition).
+```
+
+It then builds a soft target distribution
+`Q_ij proportional to exp(-D_ij / tau_metadata)`. The normalized encoder
+outputs define a second distribution
+`P_ij proportional to exp(cos(z_i,z_j) / tau_embedding)`. CNN1D training
+minimizes:
+
+```text
+L = -(1/B) sum_i sum_(j != i) Q_ij log P_ij.
+```
+
+This is a cross-entropy between target and embedding neighborhoods. The
+controlled objective is task-informed because it uses condition labels; a
+time-only version is self-supervised. See
+[Learning objectives](docs/03_LEARNING_OBJECTIVES.md) for derivation,
+temperatures, computational cost, alternatives, and required ablations.
 
 ## Installation
 
@@ -118,8 +163,17 @@ the next experimental stage.
 
 An accompanying static project page is available at
 [site/index.html](site/index.html). It can be opened directly without a web
-server. The GitHub Pages workflow publishes this page at the repository Pages
-URL and places the Sphinx documentation under `/docs/`.
+server for local inspection. After this repository is published on `main` and
+GitHub Pages is enabled with **GitHub Actions** as its source, the included
+workflow publishes:
+
+```text
+https://lorenzocnr.github.io/AI_for_all/
+```
+
+The visual project page is served at the root URL and the searchable Sphinx
+documentation under `/docs/`. The same canonical documents remain accessible
+from the repository even when Pages is disabled.
 
 Full searchable package documentation is built with Sphinx:
 
