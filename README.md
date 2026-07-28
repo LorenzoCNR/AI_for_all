@@ -53,27 +53,72 @@ run.
 
 ## Learning Objective In One View
 
-For every minibatch, NeuroBridge converts temporal and task metadata into a
-weighted pairwise distance:
+The loss asks a simple question:
 
-```text
-D_ij =
-    (w_time T_ij + w_condition sqrt(s_i s_j) I[c_i != c_j])
-    / (w_time + w_condition).
-```
+> For one neural window, which other windows should be nearby, and does the
+> encoder place them nearby?
 
-It then builds a soft target distribution
-`Q_ij proportional to exp(-D_ij / tau_metadata)`. The normalized encoder
-outputs define a second distribution
-`P_ij proportional to exp(cos(z_i,z_j) / tau_embedding)`. CNN1D training
-minimizes:
+Take window \(i\) as the **anchor** and another window \(j\) as a candidate
+neighbor. NeuroBridge first computes their desired distance:
 
-```text
-L = -(1/B) sum_i sum_(j != i) Q_ij log P_ij.
-```
+$$
+D_{ij} =
+\frac{
+w_{\mathrm{time}}\,T_{ij}
++
+w_{\mathrm{condition}}\,\sqrt{s_i s_j}\,C_{ij}
+}{
+w_{\mathrm{time}}+w_{\mathrm{condition}}
+}.
+$$
 
-This is a cross-entropy between target and embedding neighborhoods. The
-controlled objective is task-informed because it uses condition labels; a
+Every symbol has a concrete meaning:
+
+- \(T_{ij}\) is the normalized time difference between windows \(i\) and \(j\):
+  zero means the same trial time, one means maximally separated times.
+- \(C_{ij}\) is zero when their task conditions agree and one when they differ.
+- \(s_i,s_j\in[0,1]\) are movement progress. The factor
+  \(\sqrt{s_i s_j}\) keeps different directions close near their shared origin
+  and separates them as movement unfolds.
+- \(w_{\mathrm{time}}\) and \(w_{\mathrm{condition}}\) control the relative
+  importance of temporal and task information.
+- A small \(D_{ij}\) means "these windows should be neighbors."
+
+For each anchor \(i\), the distances are converted into target probabilities:
+
+$$
+Q_{ij} =
+\frac{\exp(-D_{ij}/\tau_{\mathrm{metadata}})}
+{\sum_{k\ne i}\exp(-D_{ik}/\tau_{\mathrm{metadata}})}.
+$$
+
+Thus \(Q_{ij}\) is the probability that the metadata assigns to window \(j\)
+being a neighbor of anchor \(i\). The encoder independently produces
+embedding vectors \(z_i\) and predicts:
+
+$$
+P_{ij} =
+\frac{\exp(\operatorname{cos}(z_i,z_j)/\tau_{\mathrm{embedding}})}
+{\sum_{k\ne i}\exp(\operatorname{cos}(z_i,z_k)/
+\tau_{\mathrm{embedding}})}.
+$$
+
+Training minimizes their cross-entropy:
+
+$$
+\mathcal{L}
+=
+-\frac{1}{B}
+\sum_{i=1}^{B}
+\sum_{j\ne i}
+Q_{ij}\log P_{ij},
+$$
+
+where \(B\) is the number of windows in the minibatch. In plain language, the
+loss is small when the neighborhood predicted from neural activity, \(P\),
+matches the neighborhood requested by metadata, \(Q\).
+
+The controlled objective is task-informed because it uses condition labels; a
 time-only version is self-supervised. See
 [Learning objectives](docs/03_LEARNING_OBJECTIVES.md) for derivation,
 temperatures, computational cost, alternatives, and required ablations.

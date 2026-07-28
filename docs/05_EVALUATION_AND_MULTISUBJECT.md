@@ -19,9 +19,28 @@ corresponding to the same observations. Procrustes alignment:
 
 The reported score is:
 
-```text
-R2_proc = 1 - ||Z - E_aligned||_F^2 / ||Z - mean(Z)||_F^2.
-```
+$$
+R^2_{\mathrm{Proc}}
+=
+1-
+\frac{
+\lVert Z-E_{\mathrm{aligned}}\rVert_F^2
+}{
+\lVert Z-\bar Z\rVert_F^2
+}.
+$$
+
+Here:
+
+- \(Z\) is the known latent matrix;
+- \(E_{\mathrm{aligned}}\) is the embedding after Procrustes transformation;
+- \(\bar Z\) repeats the column means of \(Z\);
+- \(\lVert\cdot\rVert_F^2\) sums the squared values of every matrix entry.
+
+The numerator is residual mismatch after alignment. The denominator is the
+total variation of the known latent around its mean. A score near one means
+small residual mismatch; zero means the aligned embedding is no better than
+using the latent mean.
 
 The operation does not reorder observations and does not delete a coordinate.
 If a candidate lag is applied, only nonoverlapping boundary rows are excluded
@@ -95,26 +114,42 @@ This setting tests two separate questions:
 
 ## Lag-Aware Alignment Scan
 
-For each candidate lag `l`, the current utility compares:
+For each candidate lag \(\ell\), the current utility compares:
 
-```text
-reference embedding at (trial,t)
-other embedding at (trial,t+l).
-```
+$$
+E_A(r,t)
+\quad\text{with}\quad
+E_B(r,t+\ell).
+$$
+
+\(r\) identifies the same trial in both subjects, \(t\) is reference time, and
+\(\ell\) is the candidate temporal displacement measured in bins.
 
 Only valid overlapping rows from the same trial are retained. No sample wraps
 across trial boundaries. Procrustes alignment is fit for that candidate and an
 alignment score is recorded:
 
-```text
-score(l) = Procrustes-R2(E_reference(t), E_other(t+l)).
-```
+$$
+\operatorname{score}(\ell)
+=
+R^2_{\mathrm{Proc}}
+\left(
+E_A(r,t),
+E_B(r,t+\ell)
+\right).
+$$
 
 The estimated lag is:
 
-```text
-l_hat = argmax_l score(l).
-```
+$$
+\widehat\ell
+=
+\underset{\ell}{\operatorname{arg\,max}}\;
+\operatorname{score}(\ell).
+$$
+
+`arg max` returns the candidate lag at which the score is largest; it returns
+the lag value, not the score itself.
 
 With this convention, a positive best lag means the second population is best
 matched at later time indices. The convention must always be restated on plots

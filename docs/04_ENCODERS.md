@@ -180,9 +180,17 @@ four-notebook validated comparison.
 
 With L2 normalization:
 
-```text
-||z_i||_2 = 1.
-```
+$$
+\widetilde z_i
+=
+\frac{z_i}{\lVert z_i\rVert_2},
+\qquad
+\lVert\widetilde z_i\rVert_2=1.
+$$
+
+\(\lVert z_i\rVert_2\) is the Euclidean length of embedding vector \(z_i\).
+Normalization divides every coordinate by that length, preserving direction
+but discarding magnitude.
 
 The dot product used by the contrastive loss then equals cosine similarity.
 This stabilizes the objective but constrains the representation to a sphere.

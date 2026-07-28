@@ -11,28 +11,92 @@ The controlled CNN1D experiment uses a **soft structured contrastive loss**.
 Two other implemented alternatives are supervised InfoNCE and temporal-offset
 InfoNCE.
 
+## The Idea Before The Equations
+
+Suppose a minibatch contains many neural windows. Pick one window \(i\), called
+the **anchor**. Every other window \(j\) is a possible neighbor.
+
+NeuroBridge constructs two answers to the same question:
+
+1. **Target answer \(Q\):** according to time and task metadata, how much
+   probability should anchor \(i\) assign to every candidate \(j\)?
+2. **Encoder answer \(P\):** according to the learned neural embeddings, how
+   much probability does anchor \(i\) actually assign to every candidate?
+
+The loss trains the encoder by making \(P\) resemble \(Q\). There is no single
+hard positive and no single hard negative: all non-self pairs can receive a
+different target weight.
+
+### Notation Used Below
+
+- Indices \(i,j,k\) identify windows in the current minibatch.
+- \(B\) is minibatch size.
+- \(x_i\) is the neural window and \(z_i=f_\theta(x_i)\) its embedding.
+- \(D_{ij}\) is a desired distance; smaller means "should be closer."
+- \(Q_{ij}\) is the target neighbor probability.
+- \(P_{ij}\) is the neighbor probability predicted by the encoder.
+- A sum over \(k\ne i\) normalizes across every candidate except the anchor
+  itself.
+
 ## Metadata Distance
 
-For minibatch elements `i` and `j`, define normalized temporal distance
-`T_ij`, categorical condition distance
+For minibatch windows \(i\) and \(j\), define:
 
-```text
-C_ij = 1[label_i != label_j],
-```
+$$
+T_{ij}
+=
+\frac{|t_i-t_j|}
+{\max_{a,b\in\mathrm{batch}}|t_a-t_b|}.
+$$
 
-and movement progress `s_i`. The controlled target uses
+Here \(t_i\) is time within the trial. Therefore \(T_{ij}\in[0,1]\): zero
+means equal trial time and one is the largest temporal separation represented
+in that minibatch.
 
-```text
-D_ij =
-    (w_time T_ij + w_condition sqrt(s_i s_j) C_ij)
-    / (w_time + w_condition).
-```
+Condition distance is:
+
+$$
+C_{ij} =
+\begin{cases}
+0, & \text{if } c_i=c_j,\\
+1, & \text{if } c_i\ne c_j.
+\end{cases}
+$$
+
+The controlled distance combines time, condition, and movement progress:
+
+$$
+D_{ij} =
+\frac{
+w_{\mathrm{time}}T_{ij}
++
+w_{\mathrm{condition}}\sqrt{s_i s_j}\,C_{ij}
+}{
+w_{\mathrm{time}}+w_{\mathrm{condition}}
+}.
+$$
+
+The symbols mean:
+
+- \(c_i\) is the task condition of window \(i\);
+- \(s_i\in[0,1]\) is its movement progress;
+- \(w_{\mathrm{time}}\) and \(w_{\mathrm{condition}}\) are nonnegative weights;
+- \(D_{ij}\) is small for desired neighbors and large for undesired neighbors.
 
 Default weights are `w_time=0.5` and `w_condition=0.5`.
 
-The progress gate has a specific purpose. Different reaching conditions share
-the same origin, so the condition penalty should be weak at movement onset and
-stronger after trajectories diverge.
+The progress gate \(\sqrt{s_i s_j}\) has a specific purpose. If both windows
+are near movement onset, then \(s_i\approx s_j\approx0\), so different
+directions receive almost no condition penalty: they truly share the center.
+Near the end of movement the gate approaches one, so different directions are
+separated.
+
+Three concrete cases clarify the distance:
+
+- same time and same condition: both terms are zero, hence \(D_{ij}=0\);
+- different time but same condition: only temporal distance contributes;
+- same late time but different conditions: the condition penalty contributes
+  almost at full strength.
 
 The package also supports temporal, circular, categorical, and continuous
 metadata geometries through a general specification API. The exact controlled
@@ -41,17 +105,25 @@ not use circular adjacency among directions.
 
 ## Soft Target Distribution
 
-Distance becomes unnormalized affinity:
+Distance becomes a positive affinity:
 
-```text
-S_ij = exp(-D_ij / tau_metadata).
-```
+$$
+S_{ij}=\exp\left(-\frac{D_{ij}}{\tau_{\mathrm{metadata}}}\right).
+$$
 
-The diagonal is removed and each row is normalized:
+Small distance gives affinity near one; large distance gives affinity near
+zero. The diagonal \(S_{ii}\) is removed because a window must not select
+itself. Each row is then normalized:
 
-```text
-Q_ij = S_ij / sum(k != i) S_ik.
-```
+$$
+Q_{ij}
+=
+\frac{S_{ij}}
+{\sum_{k\ne i}S_{ik}}
+=
+\frac{\exp(-D_{ij}/\tau_{\mathrm{metadata}})}
+{\sum_{k\ne i}\exp(-D_{ik}/\tau_{\mathrm{metadata}})}.
+$$
 
 `Q_i` is the desired probability distribution over all other observations in
 the minibatch. It replaces a binary positive/negative decision with graded
@@ -62,17 +134,34 @@ neighbors. Large values make the target flatter.
 
 ## Distribution Predicted By The Embedding
 
-Embeddings are L2-normalized. Their logits are cosine similarities:
+Embeddings are L2-normalized. For nonzero vectors, cosine similarity is:
 
-```text
-ell_ij = cosine(z_i,z_j) / tau_embedding.
-```
+$$
+\operatorname{cos}(z_i,z_j)
+=
+\frac{z_i^\top z_j}{\lVert z_i\rVert_2\lVert z_j\rVert_2}.
+$$
 
-After removing the diagonal:
+It is near one for vectors pointing in the same direction, near zero for
+orthogonal vectors, and near minus one for opposite directions.
 
-```text
-P_ij = exp(ell_ij) / sum(k != i) exp(ell_ik).
-```
+The encoder's neighbor distribution is:
+
+$$
+P_{ij}
+=
+\frac{
+\exp\left(\operatorname{cos}(z_i,z_j)/
+\tau_{\mathrm{embedding}}\right)
+}{
+\sum_{k\ne i}
+\exp\left(\operatorname{cos}(z_i,z_k)/
+\tau_{\mathrm{embedding}}\right)
+}.
+$$
+
+For each anchor \(i\), the row sums to one. A candidate with greater cosine
+similarity receives greater predicted probability.
 
 The default embedding temperature is `tau_embedding=0.1`. It controls how
 strongly the encoder distribution concentrates around its nearest embedding
@@ -85,19 +174,44 @@ The two temperatures are not interchangeable:
 
 ## Cross-Entropy Loss
 
-For minibatch size `B`, training minimizes:
+For minibatch size \(B\), training minimizes:
 
-```text
-L = -(1/B) sum_i sum(j != i) Q_ij log P_ij.
-```
+$$
+\mathcal{L}
+=
+-\frac{1}{B}
+\sum_{i=1}^{B}
+\sum_{j\ne i}
+Q_{ij}\log P_{ij}.
+$$
 
 This is the cross-entropy `CE(Q,P)`. Since `Q` is fixed with respect to model
 parameters, minimizing it is equivalent to minimizing `KL(Q || P)` up to the
 constant entropy of `Q`.
 
+The logarithm makes confident mistakes costly. If \(Q_{ij}\) is large but
+\(P_{ij}\) is tiny, then \(-Q_{ij}\log P_{ij}\) is large. If the encoder assigns
+probability in the same pattern requested by \(Q\), the loss decreases.
+
 The loss does not minimize Euclidean distance directly. It minimizes
 disagreement between two row-wise probability distributions: one built from
 metadata and one built from the learned embedding.
+
+### Dimensions In A Real Minibatch
+
+With `batch_size=256` and `embedding_dim=3`:
+
+```text
+neural windows x   : (256, 10, 100)
+embeddings z       : (256, 3)
+metadata distance D: (256, 256)
+target Q           : (256, 256)
+prediction P       : (256, 256)
+loss L             : one scalar
+```
+
+Row \(i\) of \(Q\) and row \(i\) of \(P\) both describe the 255 possible
+non-self neighbors of anchor \(i\).
 
 ## Is It Supervised?
 
