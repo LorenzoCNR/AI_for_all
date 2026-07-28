@@ -1,0 +1,30 @@
+:root {
+  --pst-color-primary: #176b55;
+  --pst-color-secondary: #b63c35;
+  --pst-color-accent: #d6a51d;
+}
+
+html[data-theme="light"] {
+  --pst-color-background: #f7f9f8;
+  --pst-color-on-background: #ffffff;
+  --pst-color-text-base: #17202a;
+  --pst-color-border: #d9dfdc;
+}
+
+.bd-header {
+  border-bottom: 3px solid #176b55;
+}
+
+.bd-main .bd-content .bd-article-container {
+  max-width: 920px;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: 0;
+}
+
+table {
+  width: 100%;
+}

@@ -28,6 +28,12 @@ dependencies = [
     "cebra"
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.4",
+    "pydata-sphinx-theme>=0.16",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

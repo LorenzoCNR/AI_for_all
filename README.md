@@ -92,6 +92,15 @@ An accompanying static project page is available at
 [site/index.html](site/index.html). It can be opened directly without a web
 server.
 
+Full searchable package documentation is built with Sphinx:
+
+```bash
+python -m pip install -e .[docs]
+docs\make.bat html
+```
+
+Open `docs/_build/html/index.html` after the build.
+
 ## Package Layout
 
 ```text

@@ -43,3 +43,6 @@ docs/internal_python_guide/
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+
+# Generated Sphinx documentation
+docs/_build/
