@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurobridge"
+version = "0.0.1"
+description = "NeuroBridge research package for synthetic neural time-series simulation and representation learning."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==1.26.4",
+    "scipy==1.13.1",
+    "pandas",
+    "scikit-learn==1.5.2",
+    "matplotlib",
+    "seaborn",
+    "plotly",
+    "pyyaml",
+    "joblib",
+    "h5py",
+    "openpyxl",
+    "packaging",
+    "tqdm",
+    "ipykernel",
+    "jupyter",
+    "torch>=2.6",
+    "cebra"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["neurobridge*"]

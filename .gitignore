@@ -1,0 +1,45 @@
+# Python generated files
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Logs and local generated artifacts
+*.log
+outputs/
+inputs/
+.env
+.vscode/
+*.zip
+
+# Local MATLAB data/autosaves
+*.mat
+*.npy
+*.hdf5
+*.h5
+Hasson_pipeline/*.mat
+Hasson_pipeline/*.asv
+
+# Local reference datasets. Track only metadata or download instructions until
+# provenance and redistribution terms have been documented.
+data/**/*.joblib
+
+# Personal archive, old experiments, private material
+_private_archive/
+docs/internal_python_guide/
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz

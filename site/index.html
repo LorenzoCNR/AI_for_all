@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="NeuroBridge: controlled neural time-series simulation and representation learning.">
+  <title>NeuroBridge | Synthetic Neural Representation Learning</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top">NeuroBridge</a>
+    <nav aria-label="Primary navigation">
+      <a href="#experiments">Experiments</a>
+      <a href="#results">Results</a>
+      <a href="#method">Method</a>
+      <a href="#reproduce">Reproduce</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <p class="eyebrow">Controlled neural time-series research</p>
+        <h1 id="hero-title">NeuroBridge</h1>
+        <p class="hero-copy">
+          Generate known motor-task latents, emit sparse neural populations,
+          and test whether linear and temporal encoders recover the geometry.
+        </p>
+        <a class="primary-link" href="#experiments">Inspect the experiment matrix</a>
+      </div>
+    </section>
+
+    <section class="question band">
+      <div class="section-inner split">
+        <div>
+          <p class="section-label">Research question</p>
+          <h2>What survives the neural observation process?</h2>
+        </div>
+        <p class="lead">
+          The simulator gives us ground truth. Circular and linear task
+          trajectories are mapped into heterogeneous neural populations,
+          converted to stochastic spike counts, and encoded with PCA or CNN1D.
+          Recovery is measured against the latent process that generated them.
+        </p>
+      </div>
+    </section>
+
+    <section id="experiments" class="band experiments">
+      <div class="section-inner">
+        <p class="section-label">Controlled comparisons</p>
+        <h2>Four experiments, one pipeline</h2>
+        <div class="experiment-table" role="table" aria-label="Experiment matrix">
+          <div class="table-row table-head" role="row">
+            <span role="columnheader">Task</span>
+            <span role="columnheader">Latent</span>
+            <span role="columnheader">Coordinates</span>
+            <span role="columnheader">Neural tuning</span>
+          </div>
+          <div class="table-row" role="row">
+            <strong role="cell">Circular essential</strong>
+            <span role="cell">3D</span>
+            <span role="cell">X, Y, progress</span>
+            <span role="cell">Direction, progress, mixed</span>
+          </div>
+          <div class="table-row" role="row">
+            <strong role="cell">Circular enriched</strong>
+            <span role="cell">5D</span>
+            <span role="cell">+ velocity, context</span>
+            <span role="cell">Heterogeneous task loadings</span>
+          </div>
+          <div class="table-row" role="row">
+            <strong role="cell">Linear essential</strong>
+            <span role="cell">2D</span>
+            <span role="cell">Position, direction</span>
+            <span role="cell">+ localized place fields</span>
+          </div>
+          <div class="table-row" role="row">
+            <strong role="cell">Linear enriched</strong>
+            <span role="cell">4D</span>
+            <span role="cell">+ velocity, context</span>
+            <span role="cell">Mixed and place-selective units</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="band results">
+      <div class="section-inner">
+        <p class="section-label">Initial benchmark</p>
+        <h2>Recovery becomes harder as latent structure is enriched</h2>
+        <div class="metrics" aria-label="RSA Spearman results">
+          <div><strong>0.740</strong><span>Circular 3D · PCA</span></div>
+          <div><strong>0.545</strong><span>Circular 3D · CNN1D</span></div>
+          <div><strong>0.807</strong><span>Linear 2D · PCA</span></div>
+          <div><strong>0.794</strong><span>Linear 2D · CNN1D</span></div>
+        </div>
+        <p class="result-note">
+          The 5D circular and 4D linear variants retain moderate distance
+          geometry, but coordinate recovery degrades. This is an experimental
+          result, not evidence that a larger latent is intrinsically worse:
+          loading strength, objective design, and validation remain ablations.
+        </p>
+      </div>
+      <div class="figure-grid">
+        <figure>
+          <img src="assets/circular_3d.png" alt="PCA and CNN embeddings for the circular 3D task">
+          <figcaption>Circular 3D: essential task geometry.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/circular_5d.png" alt="PCA and CNN embeddings for the circular 5D task">
+          <figcaption>Circular 5D: velocity and context added.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/linear_2d.png" alt="PCA and CNN embeddings for the linear 2D task">
+          <figcaption>Linear 2D: position, direction, and place fields.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/linear_4d.png" alt="PCA and CNN embeddings for the linear 4D task">
+          <figcaption>Linear 4D: enriched linear dynamics.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="method" class="band method">
+      <div class="section-inner">
+        <p class="section-label">Generative and learning blocks</p>
+        <h2>Known latent → neural drive → spikes → representation</h2>
+        <ol class="pipeline">
+          <li><span>01</span><strong>Task latent</strong><p>Generate circular or linear trajectories with interpretable coordinates.</p></li>
+          <li><span>02</span><strong>Population map</strong><p>Assign direction, position, mixed, contextual, or localized place tuning.</p></li>
+          <li><span>03</span><strong>Spike emission</strong><p>Map through neural drive and a positive rate to stochastic binned counts.</p></li>
+          <li><span>04</span><strong>Representation</strong><p>Fit PCA and a temporal CNN to identical centered neural windows.</p></li>
+          <li><span>05</span><strong>Evaluation</strong><p>Compare embeddings with ground truth using Procrustes R² and RSA.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="reproduce" class="band reproduce">
+      <div class="section-inner split">
+        <div>
+          <p class="section-label">Reproduce</p>
+          <h2>Run each experiment independently</h2>
+        </div>
+        <pre><code>python -m pip install -e .
+python notebooks/experiment_01_circular_3d.py
+python notebooks/experiment_02_circular_5d.py
+python notebooks/experiment_03_linear_2d.py
+python notebooks/experiment_04_linear_4d.py</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>NeuroBridge</strong>
+    <span>Research prototype · generated data and outputs are reproducible locally.</span>
+  </footer>
+</body>
+</html>

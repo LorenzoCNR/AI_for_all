@@ -1,0 +1,2064 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb, bm}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{NeuroBridge: Shared Latent Dynamics, Spike Generation, and Representation Learning}
+\author{Neuro\_Bridge}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Purpose}
+
+NeuroBridge is a controlled framework for studying whether latent task
+structure can be recovered from neural population activity. The central idea is
+to define a known low-dimensional task dynamics, generate subject-specific
+spike-count observations from it, and then test whether representation-learning
+methods recover both the latent geometry and the temporal relationship between
+subjects.
+
+\begin{equation}
+\text{motor condition}
+\rightarrow Z
+\rightarrow U
+\rightarrow \lambda
+\rightarrow X
+\end{equation}
+
+where:
+
+\begin{itemize}
+    \item $Z$ is the low-dimensional latent trajectory.
+    \item $U$ is the continuous neural drive.
+    \item $\lambda$ is the positive firing-rate intensity.
+    \item $X$ is the observed spike-count tensor.
+\end{itemize}
+
+\section{Notation and Dimensions}
+
+Before specifying the model, we define the main mathematical objects.
+
+\begin{center}
+\begin{tabular}{lll}
+\hline
+Symbol & Meaning & General shape\\
+\hline
+$n_{\text{trials}}$ & number of repeated trials & scalar\\
+$L$ & number of time bins in one trial & scalar\\
+$\Delta t$ & duration of one bin & scalar\\
+$k$ & latent dimension & scalar\\
+$N$ & number of neurons & scalar\\
+$c_i$ & condition/direction of trial $i$ & scalar\\
+$Z_i(t)$ & shared task latent state & $k$-vector\\
+$B^{(s)}$ & loading matrix for subject $s$ & $k \times N$\\
+$u_i^{(s)}(t)$ & neural drive & $N$-vector\\
+$\lambda_i^{(s)}(t)$ & firing-rate intensity & $N$-vector\\
+$X_i^{(s)}(t)$ & spike-count vector & $N$-vector\\
+$W_i^{(s)}(t)$ & neural window given to an encoder & window $\times N$\\
+$E_i^{(s)}(t)$ & learned embedding & embedding vector\\
+\hline
+\end{tabular}
+\end{center}
+
+The full tensors are:
+
+\begin{align}
+Z_{\text{task}} &\in
+\mathbb{R}^{n_{\text{trials}} \times L \times k},\\
+X^{(s)} &\in
+\mathbb{R}^{n_{\text{trials}} \times L \times N},\\
+B^{(s)} &\in
+\mathbb{R}^{k \times N},\\
+E^{(s)} &\in
+\mathbb{R}^{n_{\text{windows}} \times d_{\text{emb}}}.
+\end{align}
+
+Specific numerical values used in the poster run are reported later in the
+experimental-configuration section.
+
+\section{Latent Trajectories}
+
+The latent tensor has shape:
+
+\begin{equation}
+Z_{\text{task}} \in
+\mathbb{R}^{n_{\text{trials}} \times L \times k}.
+\end{equation}
+
+For each trial $i$:
+
+\begin{equation}
+Z_i(t) = m_i(t) + \eta_i(t).
+\end{equation}
+
+The deterministic part $m_i(t)$ defines the expected task trajectory for a
+given condition. The stochastic part $\eta_i(t)$ introduces smooth
+trial-to-trial variability around that expected trajectory.
+
+\subsection{Deterministic Motor Component}
+
+For a circular task, each condition is associated with an angle:
+
+\begin{equation}
+\theta_i = \frac{2\pi (c_i-1)}{n_{\text{conditions}}},
+\end{equation}
+
+where $c_i$ is the condition label for trial $i$.
+
+The temporal movement profile is:
+
+\begin{equation}
+s(t) = 10t^3 - 15t^4 + 6t^5,
+\end{equation}
+
+with $t \in [0,1]$.
+
+The polynomial $s(t)$ is a smooth phase variable for the trial. It maps the
+normalized trial time from 0 to 1 while keeping the endpoints flat:
+$s(0)=0$, $s(1)=1$, $s'(0)=s'(1)=0$, and
+$s''(0)=s''(1)=0$. In this simulator it is not meant to be a full
+biomechanical model of reaching; it is a controlled way to impose a smooth
+within-trial progression.
+
+The deterministic latent trajectory is:
+
+\begin{equation}
+m_i(t) =
+\begin{bmatrix}
+s(t)\cos\theta_i\\
+s(t)\sin\theta_i\\
+s(t)
+\end{bmatrix}.
+\end{equation}
+
+Therefore, the first two coordinates describe directional displacement on a
+circle, while the third coordinate stores the within-trial movement phase. This
+third coordinate is important: it prevents the latent trajectory from being
+only a static direction vector and gives the model an explicit temporal axis.
+
+\subsection{Stochastic Component}
+
+The noise term follows an AR(1)-like process:
+
+\begin{equation}
+\eta_i(t) = \phi \eta_i(t-1) + \epsilon_i(t),
+\end{equation}
+
+where:
+
+\begin{equation}
+\epsilon_i(t) \sim \mathcal{N}(0, \sigma_\epsilon^2 I).
+\end{equation}
+
+The innovation variance is $\sigma_\epsilon^2$. If the process is stationary
+and $|\phi|<1$, the marginal variance of one latent-noise coordinate is:
+
+\begin{equation}
+\operatorname{Var}[\eta(t)] =
+\frac{\sigma_\epsilon^2}{1-\phi^2}.
+\end{equation}
+
+Thus $\phi$ controls temporal persistence, while $\sigma_\epsilon$ controls the
+amount of trial-to-trial fluctuation injected at each time step.
+
+\section{Loading Matrix}
+
+The loading matrix specifies how the latent state is read out by a neural
+population. It is the bridge between task geometry and neuron-specific firing
+modulation:
+
+\begin{equation}
+B \in \mathbb{R}^{k \times N}.
+\end{equation}
+
+Each column of $B$ corresponds to one neuron:
+
+\begin{equation}
+\bm{b}_j = B_{:,j} \in \mathbb{R}^{k}.
+\end{equation}
+
+\subsection{Directional Tuning}
+
+The first two rows of $B$ define preferred directions:
+
+\begin{align}
+B_{1,j} &= a \cos \varphi_j,\\
+B_{2,j} &= a \sin \varphi_j,
+\end{align}
+
+where $a$ is the directional scale.
+
+Neurons are grouped by preferred task condition. This means the population is
+structured: subsets of neurons preferentially respond to different directions.
+The directional scale controls how strongly the circular latent coordinates
+modulate the neural population. A larger value produces sharper directional
+tuning and stronger separation between movement directions.
+
+The remaining latent dimensions, if present, receive smaller random loadings:
+
+\begin{equation}
+B_{3:k,j} \sim \alpha_{\text{extra}} \mathcal{N}(0,1).
+\end{equation}
+
+The parameter $\alpha_{\text{extra}}$ controls weak sensitivity to
+non-directional latent coordinates. In the circular setting, it lets the
+movement-phase dimension influence firing rates without dominating the
+directional geometry.
+
+\subsection{Interpretation}
+
+The matrix $B$ is not learned from data. It is imposed as part of the
+generative model.
+
+Its purpose is to define how neurons read out the latent motor geometry.
+If a latent direction is aligned with the preferred direction of a neuron,
+that neuron receives higher drive.
+
+\section{Neural Drive}
+
+The continuous neural drive is:
+
+\begin{equation}
+U^{(s)} = Z^{(s)} B^{(s)} + \bm{c}^{(s)}.
+\end{equation}
+
+With dimensions:
+
+\begin{align}
+Z^{(s)} &\in
+\mathbb{R}^{n_{\text{trials}} \times L \times k},\\
+B^{(s)} &\in \mathbb{R}^{k \times N},\\
+\bm{c}^{(s)} &\in \mathbb{R}^{N},\\
+U^{(s)} &\in
+\mathbb{R}^{n_{\text{trials}} \times L \times N}.
+\end{align}
+
+For trial $i$, time $t$, and neuron $j$:
+
+\begin{equation}
+u_{i,t,j} = Z_i(t) \cdot \bm{b}_j + c_j.
+\end{equation}
+
+\subsection{Baseline}
+
+The baseline vector is:
+
+\begin{equation}
+\bm{c}^{(s)} = (c_1^{(s)},\dots,c_N^{(s)}).
+\end{equation}
+
+The baseline sets the firing-rate offset before the nonlinearity. In the
+poster simulation, all neurons use the same baseline drive. This keeps the
+first experiment simple, but neuron-specific baselines are a natural extension
+when matching real recordings.
+
+\section{Firing Rate}
+
+The neural drive $U$ can be negative, so it cannot be used directly as a firing
+rate. A nonlinearity maps it into a positive rate:
+
+\begin{equation}
+\lambda_{i,t,j} = f(u_{i,t,j}).
+\end{equation}
+
+The poster simulation uses the softplus nonlinearity:
+
+\begin{equation}
+f(x) = \log(1 + e^x).
+\end{equation}
+
+The resulting tensor has shape:
+
+\begin{equation}
+\lambda^{(s)} \in
+\mathbb{R}^{n_{\text{trials}} \times L \times N}.
+\end{equation}
+
+The rate $\lambda_{i,t,j}$ is measured in expected spikes per unit time for
+neuron $j$ at time $t$ in trial $i$.
+
+\section{Spike-Count Generation}
+
+The base observation model samples spike counts as:
+
+\begin{equation}
+X_{i,t,j} \sim \text{Poisson}(\lambda_{i,t,j}\Delta t).
+\end{equation}
+
+Here $\lambda_{i,t,j}\Delta t$ is the expected spike count in one time bin.
+Thus:
+
+\begin{equation}
+X^{(s)} \in
+\mathbb{R}^{n_{\text{trials}} \times L \times N}.
+\end{equation}
+
+The pure Poisson model assumes that, conditional on the rate, spike counts
+fluctuate randomly around their expected value. The temporal structure in $X$
+comes from the temporal structure in $\lambda$, which itself comes from $Z$.
+
+The simulator also includes optional phenomenological extensions that make the
+observation model less idealized.
+
+\subsection{Overdispersion}
+
+Real spike counts often show variance larger than the mean. The pure Poisson
+model cannot represent this because it implies:
+
+\begin{equation}
+\operatorname{Var}(X) = \mathbb{E}[X].
+\end{equation}
+
+To introduce overdispersion, the simulator can multiply the rate by a random
+Gamma gain:
+
+\begin{equation}
+\lambda^{\ast}_{i,t,j} = \lambda_{i,t,j} g_{i,t,j},
+\end{equation}
+
+where:
+
+\begin{equation}
+\mathbb{E}[g_{i,t,j}] = 1.
+\end{equation}
+
+Spike counts are then sampled as:
+
+\begin{equation}
+X_{i,t,j} \sim \text{Poisson}(\lambda^{\ast}_{i,t,j}\Delta t).
+\end{equation}
+
+Setting the overdispersion parameter to zero recovers the pure Poisson
+observation model.
+
+\subsection{Refractory Period}
+
+The simulator can approximate a refractory period at the bin level. After a
+nonzero spike count, the following bins for the same neuron and trial can be
+forced to zero for a sampled refractory duration.
+
+The refractory duration is sampled as:
+
+\begin{equation}
+r_{\text{refractory}} \sim
+\max\left(0, \operatorname{round}\left[
+\mathcal{N}(\mu_r,\sigma_r^2)
+\right]\right).
+\end{equation}
+
+This is not a biophysical membrane model. It is a statistical correction that
+reduces very short inter-spike intervals.
+
+\subsection{Bursts and Local Spike Clusters}
+
+The simulator can also add short local spike clusters. A nonzero spike bin can
+start a burst with probability:
+
+\begin{equation}
+p_{\text{burst}}.
+\end{equation}
+
+If a burst starts, extra spikes are sampled and added within a short temporal
+window.
+
+This models local spike clustering phenomenologically, without attempting to
+simulate the cellular mechanisms that produce bursting.
+
+\section{Windowing}
+
+The spike tensor is reshaped:
+
+\begin{equation}
+X_{\text{reshaped}} \in
+\mathbb{R}^{(n_{\text{trials}}L) \times N}.
+\end{equation}
+
+Temporal windows have length $W=10$ bins and are centered on each original
+time bin.
+
+With centered padding, one window is produced for every original time bin. The
+missing samples at the beginning and end of each trial are filled with zeros.
+Thus the windowed dataset preserves the full time-series length:
+
+\begin{equation}
+n_{\text{windows}} = n_{\text{trials}} L.
+\end{equation}
+
+This lets the encoder produce one embedding for each original time bin while
+still receiving a local temporal context. For lag analysis, each window keeps
+its trial identity, trial-local time index, and task condition. The condition
+assigned to a window is the condition of the trial from which the window was
+drawn.
+
+Absolute trial-local time is used for lag-aware cross-population alignment.
+Relative time in $[0,1]$ is appropriate for behavioral similarity, but
+bin-level lag recovery requires integer trial-local time indices.
+
+\section{Distance and Similarity Construction}
+
+The circular reaching task uses two distances between windows:
+
+\begin{itemize}
+    \item temporal distance, based on  time
+    \item circular condition distance, based on motor condition.
+\end{itemize}
+
+They are combined into a single task-informed distance. This means that two
+windows are considered close if they are close in trial phase, close in motor
+direction, or both.
+
+More generally, the important distinction is not whether a variable is a
+``single label'' or a ``multi-label'' target. The important distinction is the
+geometry of each behavioral variable. A behavioral variable can be:
+
+\begin{itemize}
+    \item categorical, where equality or inequality is the relevant relation;
+    \item circular, such as reaching direction on a circle;
+    \item continuous one-dimensional, such as speed or position on a linear
+    track;
+    \item continuous multi-dimensional, such as a two-dimensional position
+    $(x,y)$.
+\end{itemize}
+
+For a task containing both direction and two-dimensional position, the same
+framework can be written as:
+
+\begin{equation}
+D_{\text{total}} =
+w_tD_{\text{time}}
++ w_dD_{\text{circular}}(\text{direction})
++ w_pD_{\text{euclidean}}(\text{position}_x,\text{position}_y).
+\end{equation}
+
+The total distance is converted into a similarity matrix:
+
+\begin{equation}
+S = g(D_{\text{total}}).
+\end{equation}
+
+This similarity matrix can be used as supervision or structure for downstream
+representation learning methods.
+
+\section{Representation Learning Objective}
+
+After windowing, each neural window is passed through an encoder:
+
+\begin{equation}
+z_i = f_\theta(X_i),
+\end{equation}
+
+where $X_i$ is a neural activity window and $z_i \in \mathbb{R}^3$ is the
+learned representation. The poster comparison focuses on three models:
+
+\begin{itemize}
+    \item PCA: a linear unsupervised baseline that projects neural activity
+    onto directions of maximal variance;
+    \item temporal CNN1D: a local temporal encoder that uses convolutional
+    kernels to detect short-range spike-pattern structure within each window;
+    \item Transformer: an attention-based temporal encoder that can relate
+    different bins within the window.
+\end{itemize}
+
+The input convention for the neural encoders is a batch of windows with shape:
+
+\begin{equation}
+\text{batch} \times \text{features} \times \text{sequence length}
+=
+\text{batch} \times N \times \text{window}.
+\end{equation}
+
+Thus the CNN is one-dimensional along time; neurons are treated as input
+features/channels.
+
+\subsection{Why These Three Encoders}
+
+The three encoders play different scientific roles. They should not be read as
+three arbitrary machine-learning models, but as three increasingly flexible
+ways of asking the same question: how much of the shared latent task structure
+can be recovered from population spike counts?
+
+\subsubsection{PCA: Linear Variance-Based Baseline}
+
+Principal Component Analysis is the simplest reference model. Given a matrix of
+neural observations $X \in \mathbb{R}^{m \times N}$, where rows are observations
+and columns are neurons, PCA finds orthogonal directions $v_1,\ldots,v_d$ that
+maximize projected variance:
+
+\begin{equation}
+v_1 =
+\arg\max_{\|v\|=1}
+\operatorname{Var}(Xv).
+\end{equation}
+
+The low-dimensional representation is:
+
+\begin{equation}
+z_i = x_i V_d,
+\end{equation}
+
+where $V_d$ contains the first $d$ principal axes. In the poster experiment
+$d=3$ when PCA is compared with the neural encoders.
+
+PCA is useful because it is transparent. If PCA works well, then much of the
+latent structure is already expressed as large-scale linear covariance in the
+population activity. If PCA fails while nonlinear encoders work, then the
+latent structure may be present but not linearly aligned with the dominant
+variance directions.
+
+Its limitation is equally important. PCA does not know about time, trial
+structure, task condition, or lag. It only sees variance. A high-variance
+direction may reflect nuisance variability rather than task geometry.
+Therefore, PCA is a baseline, not the main model.
+
+\subsubsection{Temporal CNN1D: Local Pattern Encoder}
+
+The temporal CNN1D receives a neural window
+$X_i \in \mathbb{R}^{N \times W}$, where $N$ is the number of neurons and $W$
+is the window length in time bins. A one-dimensional convolution applies
+temporal filters across the window:
+
+\begin{equation}
+h_{r,t}
+=
+\sigma
+\left(
+b_r +
+\sum_{n=1}^{N}
+\sum_{\Delta=0}^{K-1}
+a_{r,n,\Delta}
+X_{n,t+\Delta}
+\right),
+\end{equation}
+
+where $r$ indexes filters, $K$ is the convolutional kernel size, and $\sigma$
+is a nonlinearity. The key point is that the convolution runs along time. The
+neurons are input features/channels.
+
+This model is well matched to the spike-window setting. It can detect local
+temporal patterns such as short increases in firing, local rate changes, and
+coordinated patterns across neurons inside the window. It also has an
+inductive bias: nearby time bins matter more directly than distant bins. This
+is useful when the latent state evolves smoothly and when the window is meant
+to capture local neural context around one time point.
+
+In the current benchmark, the CNN1D is expected to be a strong compromise:
+more expressive than PCA, but less flexible than a Transformer. If it recovers
+a cleaner manifold and a plausible lag, that suggests the relevant information
+is local in time and can be captured by short temporal filters.
+
+The main limitation is window scale. If the window is too short, the CNN sees
+too little temporal context. If the window is too long, the local filters may
+mix irrelevant parts of the trial. Thus window length is not just a technical
+hyperparameter; it is a modeling assumption about the temporal scale of neural
+information.
+
+\subsubsection{Transformer: Attention-Based Window Encoder}
+
+The Transformer treats the bins inside a window as a small sequence. Each time
+bin is mapped to a token representation, and self-attention computes how much
+each bin should attend to the others:
+
+\begin{equation}
+\operatorname{Attention}(Q,K,V)
+=
+\operatorname{softmax}
+\left(
+\frac{QK^\top}{\sqrt{d_k}}
+\right)V.
+\end{equation}
+
+Unlike a convolution, attention is not restricted to nearby positions. Within
+the window, any bin can directly interact with any other bin. This makes the
+Transformer more flexible: it can learn nonlocal relationships inside the
+window and can, in principle, detect temporal patterns that are not captured by
+fixed local kernels.
+
+This flexibility is both a strength and a risk. A Transformer can align two
+subjects well in terms of lag while producing an embedding geometry that is
+compressed or visually less faithful to the original latent trajectory. In
+that case, the model may be learning a representation that is useful for
+cross-population consistency but not necessarily an interpretable recovery of
+the ground-truth latent space.
+
+For this reason, the Transformer should be evaluated with multiple diagnostics:
+latent recovery, condition organization, Procrustes-aligned cross-population
+similarity, and lag recovery. A good lag score alone is not sufficient.
+
+\subsection{How To Read The Model Comparison}
+
+The three models answer different diagnostic questions:
+
+\begin{itemize}
+    \item PCA asks whether the latent structure is visible through linear
+    population covariance.
+    \item CNN1D asks whether local temporal spike patterns are sufficient to
+    recover task geometry and lag.
+    \item Transformer asks whether a more flexible attention model can exploit
+    within-window temporal relationships beyond local filters.
+\end{itemize}
+
+The best model is therefore not automatically the one with the best single
+metric. A useful model should recover the known latent geometry, preserve
+condition structure, and localize the imposed delay between the two
+populations. These criteria can disagree, and that disagreement is itself
+scientifically informative.
+
+\subsection{Soft Structured Contrastive Cross-Entropy}
+
+The main learning objective is a soft structured contrastive cross-entropy.
+Its role is not to reconstruct $Z$ directly. Instead, task condition and
+trial-time variables define a target distribution over which neural windows
+should be close or far in the learned embedding.
+
+For a batch of embeddings, the model computes cosine logits:
+
+\begin{equation}
+\ell_{ij} =
+\frac{\operatorname{cos}(z_i,z_j)}{\tau_{\text{temp}}},
+\end{equation}
+
+where $\tau_{\text{temp}}$ is the contrastive temperature.
+
+In a hard contrastive objective, a pair is usually either positive or negative.
+Here the target relationship is soft. A pair can be strongly similar, weakly
+similar, or dissimilar depending on task/time proximity. This is the same
+softmax-denominator logic used in InfoNCE, but with a soft target distribution
+instead of a single positive sample or a hard positive set.
+
+The target similarity matrix $S$ is obtained from a metadata distance:
+
+\begin{equation}
+S_{ij} = \exp\left(-\frac{D_{\text{total},ij}}{\tau_S}\right).
+\end{equation}
+
+The total distance is a weighted combination of time and task-condition
+distances:
+
+\begin{equation}
+D_{\text{total},ij}
+=
+w_t D^{\text{time}}_{ij}
++
+w_c D^{\text{condition}}_{ij},
+\qquad
+w_t+w_c=1.
+\end{equation}
+
+The time distance is:
+
+\begin{equation}
+D^{\text{time}}_{ij} = |t_i-t_j|.
+\end{equation}
+
+The condition distance can be defined in different ways. For the current
+circular motor task, the run uses circular condition distance:
+
+\begin{equation}
+D^{\text{condition}}_{ij}
+=
+\min\left(
+|c_i-c_j|,
+n_{\text{conditions}}-|c_i-c_j|
+\right).
+\end{equation}
+
+This choice makes neighboring directions more similar than opposite
+directions. If the intended supervision should only express same/different
+condition information, the appropriate alternative is categorical distance:
+
+\begin{equation}
+D^{\text{condition}}_{ij}
+=
+\begin{cases}
+0, & c_i=c_j,\\
+1, & c_i\ne c_j.
+\end{cases}
+\end{equation}
+
+This distinction is scientifically important. Circular distance injects a weak
+task geometry over conditions. Categorical distance only imposes class consistency
+and does not impose circular ordering.
+
+For each anchor $i$, the row $S_{i,:}$ is normalized into a target probability
+distribution over other batch elements. This target distribution is denoted
+$q_{ij}$:
+
+\begin{equation}
+q_{ij} =
+\frac{S_{ij}}{\sum_{k \ne i} S_{ik}},
+\quad j \ne i.
+\end{equation}
+
+The embedding logits define the model probability $p_{ij}$, i.e. the
+similarity distribution induced by the current learned embeddings:
+
+\begin{equation}
+p_{ij} =
+\frac{\exp(\ell_{ij})}{\sum_{k \ne i}\exp(\ell_{ik})}.
+\end{equation}
+
+The loss is the cross-entropy between the soft target distribution $q_{ij}$
+and the embedding-induced distribution $p_{ij}$. For a minibatch of size $B$:
+
+\begin{equation}
+\mathcal{L}_{\text{soft-CE}} =
+- \frac{1}{B}
+\sum_{i=1}^{B}
+\sum_{\substack{j=1 \\ j \ne i}}^{B}
+q_{ij}\log p_{ij}.
+\end{equation}
+
+Here $B$ is the number of neural windows in the minibatch. The matrix
+$Q=(q_{ij})$ is the target similarity distribution induced by task/time
+distances, while $P=(p_{ij})$ is the similarity distribution induced by the
+current embeddings.
+
+This objective is useful because it can use graded information: two windows can
+be partially similar if they are close in time, close in task condition, or
+both. It sits between a purely temporal InfoNCE objective and a hard supervised
+contrastive objective. Its main risk is that the learned geometry may reflect
+the chosen metadata weights too strongly. If the time term dominates, the
+embedding may mostly encode trial phase. If the condition term dominates, the
+embedding may separate conditions without preserving continuous trajectory
+geometry.
+
+Therefore, this loss is task-structured contrastive learning. It is not a claim
+of purely unsupervised discovery: the simulator is used to test whether the
+representation learned under these constraints also recovers the known latent
+geometry and the known cross-population lag.
+
+\subsection{Supervised InfoNCE Baseline}
+
+The framework also supports a more standard supervised InfoNCE objective. In
+this case, positives are all samples in the batch with the same condition
+label:
+
+\begin{equation}
+\mathcal{P}(i) =
+\{j \ne i : y_j = y_i\}.
+\end{equation}
+
+The loss is:
+
+\begin{equation}
+\mathcal{L}_{\text{supNCE}} =
+- \frac{1}{B}\sum_i
+\frac{1}{|\mathcal{P}(i)|}
+\sum_{p \in \mathcal{P}(i)}
+\log
+\frac{\exp(\operatorname{cos}(z_i,z_p)/\tau)}
+{\sum_{a \ne i}\exp(\operatorname{cos}(z_i,z_a)/\tau)}.
+\end{equation}
+
+This objective is easier to communicate and closer to standard supervised
+contrastive learning. However, it treats all same-label samples as equally
+positive and ignores the circular distance between neighboring directions and
+the temporal structure of the trial.
+
+\subsection{Unsupervised Time-Offset InfoNCE}
+
+The framework also supports an unsupervised temporal baseline. In this
+objective, behavioral labels are not used. A positive pair is defined by
+temporal offset within the same trial:
+
+\begin{equation}
+\mathcal{P}_{\Delta}(i) =
+\{j : \operatorname{trial}(j)=\operatorname{trial}(i),
+|t_j-t_i|=\Delta\}.
+\end{equation}
+
+The same InfoNCE denominator is then used over the batch. This is important as
+a baseline because it asks whether the network can recover a useful state
+space without explicit task labels.
+
+\section{What the Benchmark Tests}
+
+The benchmark separates three objects that are usually entangled in real data:
+the task-level latent geometry, the population-specific neural readout, and the
+stochastic spike-count observation. This separation is useful because the true
+latent trajectory is known. We can therefore ask whether a learned embedding
+recovers the latent geometry, whether it preserves condition structure, and
+whether it reveals the imposed temporal offset between the two populations.
+
+The scientific question is not whether an embedding looks visually clean. The
+question is whether a model recovers information that was present in the
+controlled generative process:
+
+\begin{itemize}
+    \item latent geometry: does the embedding preserve the low-dimensional task
+    trajectory?
+    \item condition structure: do trajectories remain organized by movement
+    direction?
+    \item temporal structure: does the embedding preserve within-trial phase?
+    \item cross-subject structure: can two subject-specific neural populations
+    be aligned back to a common task space?
+    \item lag structure: can the known temporal delay between populations be
+    recovered from the learned manifolds?
+\end{itemize}
+
+This distinction matters because a model can recover one part of the structure
+and fail on another. For example, it may localize the correct inter-subject lag
+while still producing a compressed or distorted latent geometry.
+
+\section{Multi-Subject Shared Latent Setting}
+
+The simulator can generate multiple subject-specific neural observations from a
+shared latent/task process. The screen stimulus, trial labels, and task-level
+latent trajectory are common to both subjects:
+
+\begin{equation}
+Z_{\text{task}}(t)
+\rightarrow
+X^{(1)}(t), X^{(2)}(t), \dots
+\end{equation}
+
+Each subject has a different loading matrix, baseline, and spike observation
+noise:
+
+\begin{equation}
+U^{(s)} = Z^{(s)} B^{(s)} + \bm{c}^{(s)}.
+\end{equation}
+
+The task labels and motor state are shared, but the neural response can be
+subject-specific. It is useful to distinguish two latent objects:
+
+\begin{itemize}
+    \item $Z_{\text{task}}$: the shared task/stimulus latent trajectory used as
+    the ground-truth target for evaluation;
+    \item $Z_{\text{neural-driver}}^{(s)}$: the subject-specific latent driver,
+    possibly lagged, used to generate neural activity.
+\end{itemize}
+
+This creates a controlled test of whether representation learning can recover a
+common latent/task geometry from different neural observations.
+
+\subsection{Temporal Lag}
+
+In interactive motor settings, two subjects may share the same task structure
+but show a small temporal offset in neural activity. For example, one subject
+may act while another observes or responds with delay.
+
+The simulator represents this using a subject-specific neural response lag:
+
+\begin{equation}
+Z_{\text{neural-driver}}^{(s)}(t) = Z_{\text{task}}(t - \ell_s),
+\end{equation}
+
+where $\ell_s$ is measured in time bins.
+
+The labels remain unchanged because both subjects see the same screen and task
+events. Only the neural driver used to generate spikes is shifted. This makes it
+possible to test whether learned embeddings remain alignable when
+subject-specific neural observations are slightly shifted in time.
+
+\section{Shared-Space Alignment}
+
+If two encoders recover the same latent structure, their coordinates need not
+match exactly. Latent representations are often identifiable only up to
+geometric transformations such as translation, rotation, reflection, scaling,
+axis permutation, mild nonlinear warping, and temporal lag.
+
+Therefore, cross-subject evaluation should not require raw coordinate equality.
+Instead, it should test whether the recovered geometries are equivalent after
+reasonable alignment.
+
+\subsection{Recommended Evaluation}
+
+A conservative evaluation stack is:
+
+\begin{itemize}
+    \item center and scale embeddings;
+    \item align embeddings using orthogonal Procrustes;
+    \item measure residual alignment error;
+    \item compare representational distance matrices;
+    \item compute latent recovery against the known $Z$;
+    \item search over small temporal lags when the task implies delayed
+    interaction.
+\end{itemize}
+
+More flexible methods, such as affine alignment, CCA, CKA, dynamic time
+warping, manifold alignment, optimal transport, or Gromov--Wasserstein
+alignment, can be useful later. However, overly flexible alignment can hide real
+failures of the representation model. The first benchmark should therefore
+start with Procrustes alignment and representational similarity analysis.
+
+\subsection{Lag-Aware Procrustes Alignment}
+
+For cross-subject comparison, the current baseline estimates the temporal
+offset by scanning a small set of candidate lags:
+
+\begin{equation}
+\ell \in \{-15,\dots,0,\dots,15\}.
+\end{equation}
+
+For each candidate lag, the comparison pairs:
+
+\begin{equation}
+z^{(1)}(\text{trial},t)
+\quad \text{with} \quad
+z^{(2)}(\text{trial},t+\ell).
+\end{equation}
+
+The second subject embedding is then aligned to the first subject embedding
+using orthogonal Procrustes, and the lag with the best Procrustes $R^2$ is
+selected:
+
+\begin{equation}
+\ell^\ast =
+\arg\max_{\ell} R^2_{\text{Procrustes}}(\ell).
+\end{equation}
+
+In the current synthetic configuration, the delayed population is generated
+with a ten-bin neural-response lag:
+
+\begin{equation}
+\ell_{\text{delayed}} = 10 \quad \text{bins} = 100 \quad \text{ms}.
+\end{equation}
+
+The CNN gives the most sensible trade-off between latent geometry recovery and
+lag localization. The Transformer can peak at the correct lag while producing a
+compressed and less faithful geometry. This dissociation is important:
+cross-subject temporal consistency and ground-truth latent recovery are not the
+same validation target.
+
+The estimated lag is selected over candidate lags, not assumed.
+
+
+\subsection{Poster Pipeline: From Spikes to Temporal Asymmetry}
+
+The complete poster pipeline can be written as:
+
+\begin{align}
+Z_{\text{task}}
+&\rightarrow
+\left(
+Z_{\text{driver}}^{(\text{earlier})},
+Z_{\text{driver}}^{(\text{delayed})}
+\right)\\
+&\rightarrow
+\left(
+U^{(\text{earlier})}, U^{(\text{delayed})}
+\right)
+\rightarrow
+\left(
+\lambda^{(\text{earlier})}, \lambda^{(\text{delayed})}
+\right)\\
+&\rightarrow
+\left(
+X^{(\text{earlier})}, X^{(\text{delayed})}
+\right)
+\rightarrow
+\text{windows}
+\rightarrow
+\left(
+E^{(\text{earlier})}, E^{(\text{delayed})}
+\right)\\
+&\rightarrow
+\text{lag diagnostics}.
+\end{align}
+
+The shared latent is:
+
+\begin{equation}
+Z_{\text{task}} \in \mathbb{R}^{200 \times 100 \times 3}.
+\end{equation}
+
+The subject-specific neural drivers are:
+
+\begin{align}
+Z_{\text{driver}}^{(\text{earlier})}(t) &= Z_{\text{task}}(t),\\
+Z_{\text{driver}}^{(\text{delayed})}(t) &= Z_{\text{task}}(t-10).
+\end{align}
+
+Thus the delayed population is shifted by $10$ bins, corresponding to
+$100$ ms.
+
+The spike tensors are:
+
+\begin{align}
+X^{(\text{earlier})} &\in \mathbb{R}^{200 \times 100 \times 80},\\
+X^{(\text{delayed})} &\in \mathbb{R}^{200 \times 100 \times 80}.
+\end{align}
+
+The encoders operate on center-padded neural windows:
+
+\begin{equation}
+W_i^{(s)} \in \mathbb{R}^{10 \times 80}.
+\end{equation}
+
+Each window is mapped to a three-dimensional embedding:
+
+\begin{equation}
+E_i^{(s)} = f_\theta(W_i^{(s)}),
+\qquad
+E_i^{(s)} \in \mathbb{R}^{3}.
+\end{equation}
+
+Because the stride is one and padding preserves trial length, each subject has:
+
+\begin{equation}
+200 \times 100 = 20000
+\end{equation}
+
+window embeddings.
+
+\subsection{Manifold-Level Temporal Diagnostic}
+
+Beyond the Procrustes lag scan, the recovered manifolds can be inspected with a
+lag-lag diagnostic. The goal is to ask whether temporal structure in the
+earlier population appears shifted relative to temporal structure in the
+delayed population.
+
+For each population, the recovered embedding sequence is divided into temporal
+blocks. For block $b$, let:
+
+\begin{equation}
+M_b^{(\text{earlier})}, M_b^{(\text{delayed})}
+\in \mathbb{R}^{n_{\text{obs}} \times d_{\text{emb}}},
+\end{equation}
+
+where rows are trial/block observations and columns are embedding dimensions.
+A simple diagnostic compares block summaries across populations:
+
+\begin{equation}
+L_{b,b'} =
+\operatorname{sim}
+\left(
+M_b^{(\text{earlier})},
+M_{b'}^{(\text{delayed})}
+\right).
+\end{equation}
+
+In the current exploratory version, the similarity can be a correlation between
+block-level summaries. This should be interpreted cautiously: it is a visual
+diagnostic of temporal asymmetry, not a causal coupling measure.
+
+\section{Poster Storyline}
+
+This section explains how to read and present the poster. The goal is not only
+to describe the figures, but to make clear what scientific claim each block is
+allowed to support.
+
+\subsection{Question}
+
+The poster starts from one question: if two neural populations are driven by
+the same task-level latent process, but through different neural readouts and
+with a small temporal delay, can representation learning recover a shared
+geometry and reveal the delay?
+
+The important point is that the shared latent space is known because the data
+are synthetic. This gives a controlled benchmark. We are not simply asking
+whether an embedding looks organized. We are asking whether it recovers a
+known ground-truth structure and whether temporal asymmetry can be detected
+after encoding.
+
+\subsection{Workflow}
+
+The workflow summarizes the full causal chain used in the experiment:
+
+\begin{align}
+\text{shared task latent}
+&\rightarrow
+\text{subject-specific readouts}
+\rightarrow
+\text{spike populations}
+\rightarrow
+\text{windows}
+\\
+&\rightarrow
+\text{encoders}
+\rightarrow
+\text{recovered manifolds and lag diagnostics}.
+\end{align}
+
+This order matters. The two populations do not start from identical spike
+matrices. They share the same task-level latent process, but each population
+has its own neural loading matrix and stochastic spike generation. Therefore,
+any recovered similarity between the populations must survive the
+subject-specific neural readout and the spike-count observation process.
+
+\subsection{Generative Block}
+
+The generative block explains how the synthetic neural data are created. The
+shared latent trajectory is denoted by $Z$. For each population, $Z$ is mapped
+to a neural drive:
+
+\begin{equation}
+U = ZB + \bm{c},
+\end{equation}
+
+where $B$ is a population-specific loading matrix and $\bm{c}$ is an offset.
+The drive is transformed into a positive firing intensity through a softplus
+nonlinearity:
+
+\begin{equation}
+\lambda = \operatorname{softplus}(U).
+\end{equation}
+
+Spike counts are then sampled from a Poisson observation model:
+
+\begin{equation}
+X \sim \operatorname{Poisson}(\lambda \Delta t),
+\end{equation}
+
+with optional phenomenological corrections such as overdispersion,
+refractoriness, and short burst-like clusters. The delayed population is
+generated from a temporally shifted neural driver. In the poster run, the
+delay is ten bins, corresponding to $100$ ms.
+
+\subsection{Panels A and B}
+
+Panel A shows the ground-truth latent trajectories. These are the trajectories
+that the learning models should recover from spikes. The colors correspond to
+motor directions. Because $Z$ is known, the figure is not an exploratory
+visualization: it is the target geometry of the benchmark.
+
+Panel B shows observed spike rasters from the two generated populations. This
+panel is deliberately much less structured visually than Panel A. It reminds
+the reader that the encoder does not receive the latent trajectory directly.
+It receives noisy, binned spike counts generated through population-specific
+readouts.
+
+\subsection{Learning Block}
+
+The learning block is the methodological center of the poster. Each spike
+matrix is converted into local temporal windows. In the poster configuration,
+each window contains ten time bins around a target bin and all recorded neurons.
+The encoder maps each window to a low-dimensional embedding:
+
+\begin{equation}
+e_i = f_\theta(W_i),
+\qquad
+e_i \in \mathbb{R}^{3}.
+\end{equation}
+
+Three encoder families are compared:
+
+\begin{itemize}
+    \item PCA, which asks whether the latent geometry is already visible in
+    linear population covariance;
+    \item CNN1D, which asks whether local temporal spike patterns are
+    sufficient to recover geometry and delay;
+    \item Transformer, which asks whether attention over the window can exploit
+    more flexible temporal relationships.
+\end{itemize}
+
+The contrastive target is not a hard same/different label. Instead, a
+metadata distance is built from trial time and task condition:
+
+\begin{equation}
+D_{ij}
+=
+w_t D^{\text{time}}_{ij}
++
+w_c D^{\text{condition}}_{ij}.
+\end{equation}
+
+This distance is converted into a soft target distribution:
+
+\begin{equation}
+q_{ij}
+\propto
+\exp(-D_{ij}/\tau_S).
+\end{equation}
+
+The embedding itself induces a predicted similarity distribution:
+
+\begin{equation}
+p_{ij}
+\propto
+\exp
+\left(
+\operatorname{cos}(e_i,e_j)/\tau
+\right).
+\end{equation}
+
+Training minimizes cross-entropy between the target distribution $Q$ and the
+embedding-induced distribution $P$:
+
+\begin{equation}
+\mathcal{L}_{\text{soft-CE}}
+=
+-
+\frac{1}{B}
+\sum_{i=1}^{B}
+\sum_{\substack{j=1 \\ j \ne i}}^{B}
+q_{ij}\log p_{ij}.
+\end{equation}
+
+This is a task-structured contrastive objective. It is related to InfoNCE
+because it uses a softmax distribution over other samples in the batch, but it
+uses a soft target distribution rather than a single positive sample.
+
+\subsection{Panels C and D}
+
+Panels C and D show recovered manifolds from the CNN encoder. Panel C is shown
+in three dimensions because the encoder output has dimension three and the
+goal is to inspect the learned geometry in its native output space. Panel D is
+shown as a two-dimensional projection for readability: it gives a cleaner view
+of condition organization for the delayed population.
+
+The difference between a 3D view and a 2D projection should not be
+overinterpreted. A 2D projection is a visualization choice. The model output
+can still be three-dimensional even when the plotted figure displays only two
+axes or a projection. The key question is whether the recovered trajectories
+preserve condition structure and resemble the known latent geometry.
+
+\subsection{Temporal Recovery}
+
+Temporal recovery asks whether the delay imposed during generation can be
+estimated from the learned embeddings. The earlier and delayed populations are
+not compared point-by-point without adjustment. Instead, the delayed embedding
+is shifted by a set of candidate lags:
+
+\begin{equation}
+\ell \in \{-15,\ldots,15\}.
+\end{equation}
+
+For each candidate lag, the delayed embedding is paired with the earlier
+embedding at the corresponding shifted time. The two embeddings are then
+aligned with orthogonal Procrustes.
+
+\subsection{Procrustes Alignment}
+
+Procrustes alignment answers a geometric question: are two recovered spaces
+the same up to a rigid transformation? Given two centered matrices $A$ and
+$B$, Procrustes finds the orthogonal matrix $R$ that minimizes:
+
+\begin{equation}
+\|A - BR\|_F^2
+\quad
+\text{subject to}
+\quad
+R^\top R = I.
+\end{equation}
+
+This allows rotation and reflection, but does not allow arbitrary warping.
+That is why it is useful as a conservative alignment diagnostic. If two
+embeddings align well after Procrustes, they share a similar geometry even if
+their axes are not identical.
+
+In the lag scan, this alignment is repeated for every candidate lag. The
+selected lag is the lag with the best Procrustes alignment score:
+
+\begin{equation}
+\ell^\ast
+=
+\arg\max_{\ell}
+R^2_{\text{Procrustes}}(\ell).
+\end{equation}
+
+\subsection{Panel E: Lag Recovery Scan}
+
+Panel E shows the alignment score as a function of candidate lag. The vertical
+reference line marks the true imposed delay of ten bins. A model that peaks
+near this value has recovered the temporal offset between the two populations.
+
+However, this panel should be interpreted together with the manifold plots. A
+model can recover the correct lag while still producing a distorted or
+compressed geometry. Therefore, lag recovery is necessary but not sufficient
+for claiming faithful latent recovery.
+
+\subsection{Lag-Lag Map}
+
+The lag-lag map is a complementary temporal diagnostic. Instead of selecting a
+single candidate delay, both recovered manifolds are divided into temporal
+blocks. For each earlier block $b$ and delayed block $b'$, a similarity score
+is computed:
+
+\begin{equation}
+L_{b,b'}
+=
+\operatorname{sim}
+\left(
+M_b^{(\text{earlier})},
+M_{b'}^{(\text{delayed})}
+\right).
+\end{equation}
+
+This produces a matrix of temporal correspondences. If the two populations
+were perfectly synchronous, the strongest structure would be expected near the
+main diagonal. If one population is delayed, the structure may shift away from
+the diagonal. In the current poster this is exploratory: it is meant to
+visualize temporal asymmetry, not to prove causal coupling.
+
+\subsection{Panel F: Exploratory Lag-Lag Map}
+
+Panel F shows this block-wise temporal comparison. The map should be read as a
+summary of how temporal profiles in one recovered manifold relate to temporal
+profiles in the other. Warm or cool regions indicate positive or negative
+correspondence between blocks, depending on the chosen similarity measure.
+
+The main interpretive point is modest: the lag-lag map can reveal temporal
+structure that is not visible in a single static embedding plot. It is not yet
+a decoder, not a causal analysis, and not a replacement for cross-validated
+prediction.
+
+\subsection{Interpretation and Required Controls}
+
+The current interpretation is that the benchmark can separate three questions:
+
+\begin{itemize}
+    \item whether the latent task geometry is recoverable from spikes;
+    \item whether the two population embeddings can be aligned into a common
+    space;
+    \item whether the imposed delay can be estimated from the recovered
+    manifolds.
+\end{itemize}
+
+Before making stronger claims, several controls are required:
+
+\begin{itemize}
+    \item a lag-zero control, where both populations are generated without
+    temporal delay;
+    \item repeated simulations across multiple random seeds;
+    \item time-only and condition-only loss ablations;
+    \item shuffled-condition and shuffled-time controls;
+    \item comparison between PCA, CNN1D, and Transformer under identical
+    training and evaluation settings;
+    \item cross-validated prediction from one population embedding to the
+    other population, which would be stronger than a visual lag-lag map.
+\end{itemize}
+
+These controls are essential because a visually appealing manifold is not
+enough. The goal is to show that the recovered geometry and temporal asymmetry
+are stable consequences of the generative structure and learning objective,
+not artifacts of plotting, seed choice, or overly strong metadata supervision.
+
+\section{Operational Questions For The Poster Discussion}
+
+This section collects the questions that are most likely to arise during a
+poster discussion. The emphasis is practical: what object is manipulated, what
+the model receives, and what each plot is allowed to mean.
+
+\subsection{What Does It Mean To Lag One Population?}
+
+In the poster simulation, the delayed population is not delayed by
+$10$ milliseconds. It is delayed by $10$ time bins. Since the bin size is
+$\Delta t = 10$ ms, this corresponds to:
+
+\begin{equation}
+10 \text{ bins} \times 10 \text{ ms/bin} = 100 \text{ ms}.
+\end{equation}
+
+The lag is applied at the level of the latent neural driver, before spike
+generation. The shared task trajectory is $Z_{\text{task}}(t)$. The earlier
+population uses:
+
+\begin{equation}
+Z_{\text{driver}}^{(\text{earlier})}(t)
+=
+Z_{\text{task}}(t),
+\end{equation}
+
+whereas the delayed population uses:
+
+\begin{equation}
+Z_{\text{driver}}^{(\text{delayed})}(t)
+=
+Z_{\text{task}}(t-10).
+\end{equation}
+
+Intuitively, the delayed population is driven by the same latent trajectory,
+but it is seeing an earlier state of that trajectory at the current time bin.
+If the earlier population is at latent state $Z(t)$, the delayed population is
+approximately at the state that the earlier population had ten bins before.
+
+At the beginning of the trial, there is no time $t-10$. The implementation does
+not wrap the trajectory around the trial. Instead, it pads the beginning using
+the edge value of the trial. In code, the positive-lag case is equivalent to:
+
+\begin{align}
+Z_{\text{lagged}}[:, :\ell, :]
+&=
+Z[:, :1, :],
+\\
+Z_{\text{lagged}}[:, \ell:, :]
+&=
+Z[:, :-\ell, :].
+\end{align}
+
+Thus the lag is within trial, not across trials. Trial labels and task
+conditions remain the same for both populations, because both populations are
+assumed to share the same external task events. What changes is the neural
+response timing.
+
+\subsubsection{Matrix View Of The Lag}
+
+For one trial, ignore the trial index and write the latent trajectory as a
+matrix:
+
+\begin{equation}
+Z =
+\begin{bmatrix}
+z_1 \\
+z_2 \\
+\cdots \\
+z_L
+\end{bmatrix}
+\in
+\mathbb{R}^{L \times k},
+\qquad
+z_t \in \mathbb{R}^{k}.
+\end{equation}
+
+With a positive lag of $\ell$ bins, the delayed trajectory is:
+
+\begin{equation}
+Z^{(\text{delayed})}
+=
+\begin{bmatrix}
+z_1 \\
+\cdots \\
+z_1 \\
+z_1 \\
+z_2 \\
+\cdots \\
+z_{L-\ell}
+\end{bmatrix}
+\in
+\mathbb{R}^{L \times k},
+\end{equation}
+
+where the first $\ell$ rows are filled by the first valid latent state because
+the current implementation uses edge padding. The important point is that the
+shape does not change. The earlier and delayed populations still have latent
+tensors with shape:
+
+\begin{equation}
+n_{\text{trials}} \times L \times k.
+\end{equation}
+
+The delayed population is therefore not a different task and not a different
+label sequence. It is the same task-related latent trajectory sampled with a
+response delay before generating spikes.
+
+\subsection{What Is One Observational Unit?}
+
+The raw spike tensor for one population has shape:
+
+\begin{equation}
+X \in \mathbb{R}^{n_{\text{trials}} \times L \times N},
+\end{equation}
+
+where $L$ is the number of time bins per trial and $N$ is the number of
+neurons. In the poster configuration:
+
+\begin{equation}
+n_{\text{trials}}=200,
+\quad
+L=100,
+\quad
+N=80.
+\end{equation}
+
+The learning models do not receive an entire trial as one sample. They receive
+local windows. With window size $W=10$, one observational unit is:
+
+\begin{equation}
+W_i \in \mathbb{R}^{10 \times 80}.
+\end{equation}
+
+This means: ten consecutive time bins, all neurons. With centered padding and
+stride one, every original time bin has one associated window. Therefore one
+population yields:
+
+\begin{equation}
+200 \times 100 = 20000
+\end{equation}
+
+windows and therefore 20000 embeddings.
+
+\subsection{What Is A Batch?}
+
+A batch is a collection of windows sampled for one optimization step. If the
+batch size is $B$, the model receives:
+
+\begin{equation}
+\text{batch}
+\in
+\mathbb{R}^{B \times 10 \times 80}.
+\end{equation}
+
+So, if $B=30$, then the batch contains 30 windows, and each window contains 10
+time bins by 80 neurons. In the current baseline suite the batch size is a
+hyperparameter; for example, one configuration uses $B=256$. The important
+point is:
+
+\begin{equation}
+\text{batch size} \ne \text{window size}.
+\end{equation}
+
+The window size says how much local temporal context each sample contains. The
+batch size says how many such samples are processed together and compared
+inside the contrastive loss.
+
+\subsection{How Does Each Model See The Same Window?}
+
+All models receive windows derived from the same spike data, but they interpret
+the window differently.
+
+\subsubsection{PCA}
+
+PCA is not temporal in itself. To apply PCA to a window, the window is treated
+as a vector of features. A $10 \times 80$ window can be flattened into:
+
+\begin{equation}
+\operatorname{vec}(W_i) \in \mathbb{R}^{800}.
+\end{equation}
+
+PCA then finds linear directions of maximal variance across all windows. It
+does not know that the first ten groups of features came from ordered time
+bins unless this temporal structure is already reflected in the covariance.
+
+Therefore, PCA is useful as a baseline: it asks whether the latent structure is
+already visible in linear variance. But PCA does not learn temporal filters,
+attention, or task-aware nonlinear transformations.
+
+\subsubsection{CNN1D}
+
+The CNN1D treats the window as a short temporal signal. Conceptually, the
+input is arranged as:
+
+\begin{equation}
+\text{batch} \times \text{neurons} \times \text{time}
+=
+B \times 80 \times 10.
+\end{equation}
+
+The convolution slides filters along the time dimension. A filter can detect
+local temporal motifs such as a short rise in firing rate, a local pattern
+across neurons, or a brief coordinated event. This is why the window is most
+natural for the CNN: the model is explicitly designed to exploit local
+temporal structure.
+
+The CNN has a strong inductive bias. It assumes that nearby bins contain useful
+information and that local temporal patterns can be reused across the window.
+This can be an advantage when neural dynamics are smooth or locally structured.
+It can be a limitation if the relevant relationship is nonlocal or depends on
+longer trial context.
+
+\subsubsection{Transformer}
+
+The Transformer also receives the same $10 \times 80$ window, but interprets
+it as a sequence of ten tokens. Each token corresponds to one time bin, whose
+features are the neural population activity at that bin:
+
+\begin{equation}
+W_i =
+(x_{t-4}, x_{t-3}, \ldots, x_{t+5}),
+\qquad
+x_t \in \mathbb{R}^{80}.
+\end{equation}
+
+Self-attention lets each time bin compare itself with every other bin inside
+the window:
+
+\begin{equation}
+\operatorname{Attention}(Q,K,V)
+=
+\operatorname{softmax}
+\left(
+\frac{QK^\top}{\sqrt{d_k}}
+\right)V.
+\end{equation}
+
+This means the Transformer is less local than the CNN. It can learn that the
+beginning and end of the window are related, or that some bins should be
+weighted more than others. This flexibility can help with temporal alignment,
+but it can also produce embeddings that are useful for the lag score while
+being geometrically compressed or harder to interpret.
+
+\subsubsection{What A Token Means Here}
+
+In language models, a token is usually a word fragment. In this neural setting,
+a token is not a word. A token is one time bin of neural population activity.
+For a window with $W=10$ bins and $N=80$ neurons, the input window is:
+
+\begin{equation}
+W_i =
+\begin{bmatrix}
+x_{t-4} \\
+x_{t-3} \\
+\cdots \\
+x_{t+5}
+\end{bmatrix},
+\qquad
+x_t \in \mathbb{R}^{80}.
+\end{equation}
+
+Thus the Transformer sees ten tokens:
+
+\begin{equation}
+\underbrace{x_{t-4}}_{\text{token 1}},
+\underbrace{x_{t-3}}_{\text{token 2}},
+\ldots,
+\underbrace{x_{t+5}}_{\text{token 10}}.
+\end{equation}
+
+Each token is an 80-dimensional vector containing the activity of the whole
+population at one time bin. A linear layer first maps each token from
+$\mathbb{R}^{80}$ to the internal Transformer dimension $d_{\text{model}}$.
+Self-attention then lets the ten bins inside the same window compare with one
+another. After attention, the window is summarized into one output embedding:
+
+\begin{equation}
+f_\theta(W_i) = e_i,
+\qquad
+e_i \in \mathbb{R}^{3}.
+\end{equation}
+
+This is the crucial dimensional point: the Transformer does not output one
+embedding per token in the final representation used for the contrastive loss.
+It uses the ten tokens to compute one representation for the whole local
+window.
+
+\subsubsection{Do Windows Talk To Each Other Inside The Transformer?}
+
+In the current setup, no. The Transformer operates inside one window at a
+time. If the batch has shape:
+
+\begin{equation}
+B \times 10 \times 80,
+\end{equation}
+
+then the Transformer processes each of the $B$ windows independently and
+returns:
+
+\begin{equation}
+E_{\text{batch}} \in \mathbb{R}^{B \times 3}.
+\end{equation}
+
+The communication between different windows happens in the loss, not inside
+the Transformer. This gives two separate levels:
+
+\begin{itemize}
+    \item within-window learning: CNN filters or Transformer attention extract
+    a representation from the ten-bin neural context;
+    \item between-window learning: the contrastive loss compares the resulting
+    embeddings across windows in the batch.
+\end{itemize}
+
+So the model first converts each local neural movie
+$W_i \in \mathbb{R}^{10 \times 80}$ into one point
+$e_i \in \mathbb{R}^{3}$. Then the loss asks whether the distances among those
+points are compatible with the task/time metadata distances among the
+corresponding windows.
+
+\subsection{Why Use Windows For PCA And Transformer Too?}
+
+Using windows for all models keeps the comparison fair: each method receives
+the same local neural information around each target time bin. The difference
+is not the data each method sees, but how the method processes that data.
+
+For PCA, the window is a high-dimensional vector. For CNN1D, the window is a
+local temporal signal. For the Transformer, the window is a short sequence.
+Thus the same window supports three different modeling assumptions:
+
+\begin{itemize}
+    \item linear covariance structure for PCA;
+    \item local temporal filters for CNN1D;
+    \item flexible within-window temporal relations for the Transformer.
+\end{itemize}
+
+\subsection{What Exactly Does Procrustes Do In The Lag Plot?}
+
+The Procrustes step is not used to train the model. It is used after training
+as an evaluation tool. Suppose we have two embeddings:
+
+\begin{equation}
+E^{(\text{earlier})}
+\quad \text{and} \quad
+E^{(\text{delayed})}.
+\end{equation}
+
+Even if both embeddings recover the same latent geometry, their coordinate
+axes may be rotated or reflected relative to each other. Procrustes asks:
+can one embedding be rotated/reflected so that it overlaps the other?
+
+For a candidate lag $\ell$, we first pair points by trial and shifted time:
+
+\begin{equation}
+E^{(\text{earlier})}(\text{trial},t)
+\leftrightarrow
+E^{(\text{delayed})}(\text{trial},t+\ell).
+\end{equation}
+
+Then we find the best orthogonal transformation $R_\ell$:
+
+\begin{equation}
+R_\ell
+=
+\arg\min_{R^\top R=I}
+\left\|
+E^{(\text{earlier})}
+-
+E^{(\text{delayed})}R
+\right\|_F^2.
+\end{equation}
+
+The score plotted in the lag recovery graph is high when the delayed embedding,
+after the candidate shift and Procrustes rotation, matches the earlier
+embedding well. The best lag is:
+
+\begin{equation}
+\ell^\ast =
+\arg\max_\ell
+R^2_{\text{Procrustes}}(\ell).
+\end{equation}
+
+Intuitively, the graph says: ``if I shift the delayed population by this many
+bins, how well can its recovered manifold be rotated onto the earlier
+population's manifold?'' A peak near the true lag suggests that the embedding
+contains the temporal offset. It does not by itself prove that the entire
+latent geometry was recovered faithfully.
+
+\subsubsection{What Is Lost When Testing A Candidate Lag?}
+
+Suppose the two recovered embeddings are:
+
+\begin{equation}
+E^{(\text{earlier})},
+E^{(\text{delayed})}
+\in
+\mathbb{R}^{20000 \times 3}.
+\end{equation}
+
+The number 20000 is the number of window-centered observations, for example
+$200$ trials times $100$ bins. The number 3 is the embedding dimension.
+
+If we test a candidate lag of $\ell=15$ bins, we cannot compare all 20000 rows,
+because the shifted sequence has missing partners at the edges of each trial.
+For a positive lag, the comparison is conceptually:
+
+\begin{equation}
+E^{(\text{earlier})}(\text{trial},t)
+\quad \text{with} \quad
+E^{(\text{delayed})}(\text{trial},t+\ell).
+\end{equation}
+
+Only valid within-trial pairs are kept. Therefore, some rows near the beginning
+or end of each trial are discarded for that candidate lag. What is discarded is
+time points, not embedding dimensions. The matrices passed to Procrustes are:
+
+\begin{equation}
+A_\ell, B_\ell \in \mathbb{R}^{m_\ell \times 3},
+\end{equation}
+
+where $m_\ell$ is the number of valid matched rows after shifting. The three
+embedding coordinates are still present.
+
+\subsubsection{What Procrustes Maximizes}
+
+For each candidate lag $\ell$, Procrustes finds the best rotation/reflection
+of the delayed embedding onto the earlier embedding:
+
+\begin{equation}
+R_\ell
+=
+\arg\min_{R^\top R=I}
+\left\|
+A_\ell - B_\ell R
+\right\|_F^2.
+\end{equation}
+
+The associated score can be expressed as an alignment $R^2$: how much of the
+variance in $A_\ell$ is explained by the optimally aligned $B_\ell$. The lag
+scan repeats this for many candidate lags and selects:
+
+\begin{equation}
+\ell^\ast =
+\arg\max_\ell R^2(\ell).
+\end{equation}
+
+Thus the lag score is not a nonlinear decoder. It is a lag-conditioned linear
+geometric alignment test. It asks whether, after matching the correct temporal
+rows and allowing a rigid change of coordinate system, the two recovered
+manifolds occupy the same geometry.
+
+\subsection{How To Explain The Soft Contrastive Loss}
+
+The loss builds a target notion of similarity between windows before looking
+at the embedding. Two windows are treated as similar if they are close in trial
+time, close in task condition, or both. This is encoded by a distance:
+
+\begin{equation}
+D_{ij}
+=
+w_t D^{\text{time}}_{ij}
++
+w_c D^{\text{condition}}_{ij}.
+\end{equation}
+
+This distance is transformed into a soft probability distribution:
+
+\begin{equation}
+q_{ij}
+=
+\frac{\exp(-D_{ij}/\tau_S)}
+{\sum_{k\ne i}\exp(-D_{ik}/\tau_S)}.
+\end{equation}
+
+The embedding produces its own probability distribution:
+
+\begin{equation}
+p_{ij}
+=
+\frac{\exp(\operatorname{cos}(e_i,e_j)/\tau)}
+{\sum_{k\ne i}\exp(\operatorname{cos}(e_i,e_k)/\tau)}.
+\end{equation}
+
+The loss minimizes:
+
+\begin{equation}
+\mathcal{L}_{\text{soft-CE}}
+=
+-
+\frac{1}{B}
+\sum_{i=1}^{B}
+\sum_{j\ne i}
+q_{ij}\log p_{ij}.
+\end{equation}
+
+In words: if the metadata say that two windows should be close, the embedding
+is encouraged to assign them high similarity. If the metadata say they should
+be far, the embedding is encouraged to assign them low similarity. This is
+``soft'' because similarity is graded, not binary. It is contrastive because
+each window is compared against other windows in the batch.
+
+\subsubsection{Anchors, Soft Positives, And Effective Negatives}
+
+In a standard hard contrastive setup, one often chooses an anchor, one positive
+sample, and many negative samples. Here the logic is softer.
+
+For a batch of $B$ windows, the encoder returns:
+
+\begin{equation}
+E_{\text{batch}}
+=
+\begin{bmatrix}
+e_1 \\
+e_2 \\
+\cdots \\
+e_B
+\end{bmatrix}
+\in
+\mathbb{R}^{B \times 3}.
+\end{equation}
+
+For each row $i$, the embedding $e_i$ is the anchor. Every other row $j \ne i$
+is a comparison candidate. The metadata distance $D_{ij}$ decides how much
+candidate $j$ should behave like a positive example for anchor $i$:
+
+\begin{itemize}
+    \item small $D_{ij}$: window $j$ is a strong soft positive for window $i$;
+    \item intermediate $D_{ij}$: window $j$ is partially related to window $i$;
+    \item large $D_{ij}$: window $j$ behaves like an effective negative.
+\end{itemize}
+
+Thus the loss does not say ``same condition is positive, different condition
+is negative'' in a hard binary way. It says that the whole similarity profile
+around anchor $i$ should match the metadata-defined similarity profile around
+that same anchor. This is why the loss can combine time and condition without
+collapsing everything into a single hard label.
+
+\subsubsection{Where The Window Ends And The Embedding Begins}
+
+The model never compares raw windows directly in the loss. The comparison is
+between embeddings. The complete pipeline for one batch is:
+
+\begin{equation}
+W_i \in \mathbb{R}^{10 \times 80}
+\xrightarrow{\ f_\theta\ }
+e_i \in \mathbb{R}^{3}
+\xrightarrow{\ \text{batch comparison}\ }
+\{p_{ij}\}_{j\ne i}.
+\end{equation}
+
+So, yes: the encoder first studies structure inside each window. Then the
+loss studies relations between windows by comparing their 3D embeddings. The
+metadata distance is defined between windows because each embedding
+corresponds to one window.
+
+\subsection{How To Explain The Lag-Lag Map}
+
+The lag recovery scan searches for a single best delay. The lag-lag map asks a
+more exploratory question: how do temporal blocks in one recovered manifold
+relate to temporal blocks in the other?
+
+Each recovered embedding sequence is divided into temporal blocks. For each
+pair of blocks, one from the earlier population and one from the delayed
+population, the analysis computes a similarity:
+
+\begin{equation}
+L_{b,b'}
+=
+\operatorname{sim}
+\left(
+M_b^{(\text{earlier})},
+M_{b'}^{(\text{delayed})}
+\right).
+\end{equation}
+
+Rows and columns are temporal blocks or lags. A diagonal pattern suggests that
+similar temporal structure occurs at similar times. A shifted pattern suggests
+that one population's temporal structure is displaced relative to the other.
+
+The limitation is important: in the current poster, this is a descriptive
+diagnostic. It summarizes temporal correspondence between recovered manifolds,
+but it is not yet a decoding proof, not a causal measure, and not a statistical
+test of coupling.
+
+\subsection{Limits To State Clearly}
+
+The main limits to state in discussion are:
+
+\begin{itemize}
+    \item the data are synthetic, so the current claim is about benchmark
+    behavior, not direct biological discovery;
+    \item the delay is imposed in the latent neural driver, not estimated from
+    real simultaneous recordings;
+    \item the soft contrastive loss injects task/time structure through the
+    metadata distance, so the result is task-structured learning, not pure
+    unsupervised discovery;
+    \item a correct lag peak does not guarantee faithful recovery of the full
+    latent geometry;
+    \item the lag-lag map is exploratory and should be strengthened with
+    cross-validated prediction or decoding;
+    \item window size, metadata weights, temperature, batch size, and random
+    seed need systematic sensitivity analysis.
+\end{itemize}
+
+\section{Poster Experimental Configuration}
+
+The poster simulation uses the following concrete setting:
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+Quantity & Value\\
+\hline
+trials & $200$\\
+trial length & $100$ bins\\
+bin size & $\Delta t = 0.01$ s\\
+trial duration & $1$ s\\
+conditions & $8$ circular directions\\
+latent dimension & $k=3$\\
+neurons per population & $N=80$\\
+temporal persistence & $\phi=0.4$\\
+latent noise scale & $\sigma=0.15$\\
+directional loading scale & $3.0$\\
+extra loading scale & $0.051$\\
+nonlinearity & softplus\\
+overdispersion & $0.25$\\
+refractory duration & mean $2$ bins, sd $1$ bin\\
+burst probability & $0.05$\\
+burst window & $3$ bins\\
+earlier population lag & $0$ bins\\
+delayed population lag & $10$ bins $=100$ ms\\
+window size & $10$ bins\\
+stride & $1$ bin\\
+padding & centered zero padding\\
+embedding dimension & $3$\\
+contrastive temperature & $0.2$\\
+soft similarity scale & $0.5$\\
+time/label weights & $0.5/0.5$\\
+\hline
+\end{tabular}
+\end{center}
+
+For downstream analysis, each method can be exported as a trial-level structure
+with one element per trial. For each trial, the relevant quantities are:
+
+\begin{itemize}
+    \item the trial direction;
+    \item the earlier population spike matrix, $80 \times 100$;
+    \item the delayed population spike matrix, $80 \times 100$;
+    \item the trial time vector, $1 \times 100$;
+    \item the earlier recovered embedding, $3 \times 100$;
+    \item the delayed recovered embedding, $3 \times 100$.
+\end{itemize}
+
+The important point is conceptual rather than file-format specific: the same
+trial contains both the generated spike counts and the recovered manifold for
+the earlier and delayed populations.
+
+\section{Known Limitations}
+
+The current spike-count observation model is still simplified:
+
+\begin{itemize}
+    \item overdispersion, refractoriness, and bursts are phenomenological
+    corrections rather than mechanistic biophysical models;
+    \item shared population noise and neuron-neuron correlations are still not
+    explicitly modeled;
+    \item neuron-specific spike variability is limited;
+    \item refractory and burst parameters are currently simple distributional
+    controls rather than fitted parameters.
+\end{itemize}
+
+\section{Selected References}
+
+\begin{itemize}
+    \item Dayan, P. and Abbott, L. F. (2001).
+    \textit{Theoretical Neuroscience: Computational and Mathematical Modeling
+    of Neural Systems}. MIT Press.
+
+    \item Jolliffe, I. T. (2002).
+    \textit{Principal Component Analysis}. Springer.
+
+    \item LeCun, Y., Bengio, Y., and Hinton, G. (2015).
+    Deep learning.
+    \textit{Nature}, 521, 436--444.
+    \texttt{https://doi.org/10.1038/nature14539}
+
+    \item Vaswani, A., et al. (2017).
+    Attention is all you need.
+    \textit{Advances in Neural Information Processing Systems}.
+    \texttt{https://arxiv.org/abs/1706.03762}
+
+    \item van den Oord, A., Li, Y., and Vinyals, O. (2018).
+    Representation learning with contrastive predictive coding.
+    \texttt{https://arxiv.org/abs/1807.03748}
+
+    \item Gallego, J. A., et al. (2023).
+    Aligning latent representations of neural activity.
+    \textit{Nature Biomedical Engineering}, 7, 337--343.
+    \texttt{https://doi.org/10.1038/s41551-022-00962-7}
+
+    \item Pezzulo, G., Donnarumma, F., Ferrari-Toniolo, S., Cisek, P.,
+    and Battaglia-Mayer, A. (2022).
+    Shared population-level dynamics in monkey premotor cortex during solo
+    action, joint action and action observation.
+    \textit{Progress in Neurobiology}, 210, 102214.
+    \texttt{https://doi.org/10.1016/j.pneurobio.2021.102214}
+
+    \item Schoenemann, P. H. (1966).
+    A generalized solution of the orthogonal Procrustes problem.
+    \textit{Psychometrika}, 31, 1--10.
+    \texttt{https://doi.org/10.1007/BF02289451}
+
+    \item Kriegeskorte, N., Mur, M., and Bandettini, P. (2008).
+    Representational similarity analysis: connecting the branches of systems
+    neuroscience.
+    \textit{Frontiers in Systems Neuroscience}, 2, 4.
+    \texttt{https://doi.org/10.3389/neuro.06.004.2008}
+
+    \item Haxby, J. V., et al. (2011).
+    A common, high-dimensional model of the representational space in human
+    ventral temporal cortex.
+    \textit{Neuron}, 72, 404--416.
+    \texttt{https://doi.org/10.1016/j.neuron.2011.08.026}
+
+    \item Kornblith, S., Norouzi, M., Lee, H., and Hinton, G. (2019).
+    Similarity of neural network representations revisited.
+    \textit{Proceedings of ICML}.
+    \texttt{https://arxiv.org/abs/1905.00414}
+
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,78 @@
+﻿Neuro_Bridge
+├── .vscode
+│   ├── extensions.json
+│   ├── launch.json
+│   └── settings.json
+├── configs
+│   ├── __init__.py
+│   └── cebra_model_params.yaml
+├── docs
+│   ├── implementation_file_map.md
+│   ├── project_cleanup_audit.md
+│   ├── PROJECT_STATE.md
+│   ├── simulator_design_appendix.md
+│   ├── simulator_spec.md
+│   ├── spike_simulator_generative_model.pdf
+│   └── spike_simulator_generative_model.tex
+├── experiments
+│   ├── encoder_baseline_suite.py
+│   └── Spike_simulator.py
+├── src
+│   ├── neurobridge
+│   │   ├── data
+│   │   │   ├── sim
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── builders.py
+│   │   │   │   ├── Lat_traj_generator.py
+│   │   │   │   └── Spikes_generator.py
+│   │   │   ├── __init__.py
+│   │   │   ├── data_helpers.py
+│   │   │   ├── dataset.py
+│   │   │   ├── io.py
+│   │   │   └── preprocess.py
+│   │   ├── eval
+│   │   │   ├── decoding_Eval.py
+│   │   │   ├── knn_decoder.py
+│   │   │   └── representation.py
+│   │   ├── losses
+│   │   │   ├── __init__.py
+│   │   │   └── infonce.py
+│   │   ├── math
+│   │   │   └── distances.py
+│   │   ├── models
+│   │   │   ├── __init__.py
+│   │   │   ├── blocks.py
+│   │   │   ├── cebra_adapter.py
+│   │   │   └── temporal_cnn.py
+│   │   ├── sampling
+│   │   │   ├── __init__.py
+│   │   │   ├── batch_similarity.py
+│   │   │   ├── f_distances.py
+│   │   │   ├── f_windows.py
+│   │   │   ├── labelled.py
+│   │   │   ├── positive_weights.py
+│   │   │   └── similarity_.py
+│   │   ├── train
+│   │   │   ├── __init__.py
+│   │   │   └── loop.py
+│   │   ├── utils
+│   │   │   ├── config.py
+│   │   │   ├── debug.py
+│   │   │   ├── io.py
+│   │   │   ├── paths.py
+│   │   │   ├── project_store.py
+│   │   │   └── resample.py
+│   │   ├── viz
+│   │   │   ├── manifold_plots.py
+│   │   │   └── plots.py
+│   │   └── __init__.py
+│   └── __init__.py
+├── tests
+│   ├── test_embedding_plots.py
+│   ├── test_learning_components.py
+│   ├── test_representation_eval.py
+│   └── test_similarity.py
+├── .gitignore
+├── README.md
+├── setup_dirs.bat
+└── Tree_Module_packages.txt
