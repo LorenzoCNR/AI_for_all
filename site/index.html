@@ -207,7 +207,7 @@
           <li><span>02</span><strong>Population map</strong><p>Assign direction, position, mixed, contextual, or localized place tuning.</p></li>
           <li><span>03</span><strong>Spike emission</strong><p>Convert neural drive to rates and sample stochastic counts in 20 ms bins.</p></li>
           <li><span>04</span><strong>Representation</strong><p>Fit PCA and a residual temporal CNN on an 80% trial split using identical centered windows.</p></li>
-          <li><span>05</span><strong>Soft target</strong><p>Combine temporal and task-state distances, with condition separation increasing as movement unfolds.</p></li>
+          <li><span>05</span><strong>Contrastive learning</strong><p>Train CNN1D with a soft structured contrastive loss: graded pair affinities derived from time and task metadata guide neighborhoods in embedding space.</p></li>
           <li><span>06</span><strong>Evaluation</strong><p>Evaluate untouched trials with aggregate Procrustes R^2, RSA, and trial-averaged trajectories.</p></li>
         </ol>
       </div>

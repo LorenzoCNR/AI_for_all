@@ -102,6 +102,11 @@ embedding vectors from a ten-bin window.
 Structured contrastive target
 -----------------------------
 
+CNN1D is trained with a **soft structured contrastive loss**. It is
+contrastive because every anchor window is compared with the other windows in
+the minibatch, soft because pair relevance is graded rather than binary, and
+structured because that relevance is derived from temporal and task metadata.
+
 Metadata distances define a soft target distribution over pairs. Let ``s``
 denote movement progress and let ``I(c_i != c_j)`` be a categorical condition
 distance:

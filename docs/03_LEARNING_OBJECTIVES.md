@@ -11,6 +11,13 @@ The controlled CNN1D experiment uses a **soft structured contrastive loss**.
 Two other implemented alternatives are supervised InfoNCE and temporal-offset
 InfoNCE.
 
+It is contrastive because each anchor window is compared with all other
+windows in the minibatch. It is soft because those candidate pairs are not
+reduced to a binary positive/negative split: each pair can receive a different
+target weight. It is structured because the weights are constructed from
+temporal and task metadata. The loss then asks the embedding-space
+neighborhoods to reproduce that target structure.
+
 ## The Idea Before The Equations
 
 Suppose a minibatch contains many neural windows. Pick one window $i$, called

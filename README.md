@@ -8,7 +8,9 @@ population, and tests whether representation-learning methods can recover the
 latent geometry from sparse spike counts.
 
 The current repository is a research prototype. Its reproducible experiment
-suite compares PCA with a contrastively trained temporal CNN.
+suite compares PCA with a temporal CNN trained using a **soft structured
+contrastive loss**. The complete objective is described in
+[Learning objectives and loss](docs/03_LEARNING_OBJECTIVES.md).
 
 ## Documentation
 
