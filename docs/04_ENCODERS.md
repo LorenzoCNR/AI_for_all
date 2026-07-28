@@ -180,15 +180,15 @@ four-notebook validated comparison.
 
 With L2 normalization:
 
-$$
+```math
 \widetilde z_i
 =
-\frac{z_i}{\lVert z_i\rVert_2},
+\frac{z_i}{\| z_i\|_2},
 \qquad
-\lVert\widetilde z_i\rVert_2=1.
-$$
+\|\widetilde z_i\|_2=1.
+```
 
-\(\lVert z_i\rVert_2\) is the Euclidean length of embedding vector \(z_i\).
+$\| z_i\|_2$ is the Euclidean length of embedding vector $z_i$.
 Normalization divides every coordinate by that length, preserving direction
 but discarding magnitude.
 

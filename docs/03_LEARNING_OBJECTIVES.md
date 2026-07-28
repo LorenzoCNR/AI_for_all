@@ -13,90 +13,129 @@ InfoNCE.
 
 ## The Idea Before The Equations
 
-Suppose a minibatch contains many neural windows. Pick one window \(i\), called
-the **anchor**. Every other window \(j\) is a possible neighbor.
+Suppose a minibatch contains many neural windows. Pick one window $i$, called
+the **anchor**. Every other window $j$ is a possible neighbor.
 
 NeuroBridge constructs two answers to the same question:
 
-1. **Target answer \(Q\):** according to time and task metadata, how much
-   probability should anchor \(i\) assign to every candidate \(j\)?
-2. **Encoder answer \(P\):** according to the learned neural embeddings, how
-   much probability does anchor \(i\) actually assign to every candidate?
+1. **Target answer $Q$:** according to time and task metadata, how much
+   probability should anchor $i$ assign to every candidate $j$?
+2. **Encoder answer $P$:** according to the learned neural embeddings, how
+   much probability does anchor $i$ actually assign to every candidate?
 
-The loss trains the encoder by making \(P\) resemble \(Q\). There is no single
+The loss trains the encoder by making $P$ resemble $Q$. There is no single
 hard positive and no single hard negative: all non-self pairs can receive a
 different target weight.
 
 ### Notation Used Below
 
-- Indices \(i,j,k\) identify windows in the current minibatch.
-- \(B\) is minibatch size.
-- \(x_i\) is the neural window and \(z_i=f_\theta(x_i)\) its embedding.
-- \(D_{ij}\) is a desired distance; smaller means "should be closer."
-- \(Q_{ij}\) is the target neighbor probability.
-- \(P_{ij}\) is the neighbor probability predicted by the encoder.
-- A sum over \(k\ne i\) normalizes across every candidate except the anchor
+- Indices $i,j,k$ identify windows in the current minibatch.
+- $B$ is minibatch size.
+- $x_i$ is the neural window and $z_i=f_\theta(x_i)$ its embedding.
+- $D_{ij}$ is a desired distance; smaller means "should be closer."
+- $Q_{ij}$ is the target neighbor probability.
+- $P_{ij}$ is the neighbor probability predicted by the encoder.
+- A sum over $k\ne i$ normalizes across every candidate except the anchor
   itself.
 
 ## Metadata Distance
 
-For minibatch windows \(i\) and \(j\), define:
+The metadata distance is a **designed training target**. It is computed from
+known time and task descriptors, not from neural activity. The encoder never
+uses it as an input feature; it sees neural windows and is penalized when their
+embedding neighborhoods disagree with this target.
 
-$$
-T_{ij}
-=
-\frac{|t_i-t_j|}
-{\max_{a,b\in\mathrm{batch}}|t_a-t_b|}.
-$$
+### Step 1: Temporal Separation
 
-Here \(t_i\) is time within the trial. Therefore \(T_{ij}\in[0,1]\): zero
-means equal trial time and one is the largest temporal separation represented
-in that minibatch.
+For windows $i$ and $j$, first compute absolute temporal separation:
 
-Condition distance is:
+```math
+\Delta t_{ij}=|t_i-t_j|.
+```
 
-$$
-C_{ij} =
-\begin{cases}
-0, & \text{if } c_i=c_j,\\
-1, & \text{if } c_i\ne c_j.
-\end{cases}
-$$
+Let $\Delta t_{\max}$ be the largest pairwise temporal separation in the
+current minibatch. Normalize:
 
-The controlled distance combines time, condition, and movement progress:
+```math
+T_{ij}=\frac{\Delta t_{ij}}{\Delta t_{\max}}.
+```
 
-$$
+Therefore $T_{ij}$ lies between zero and one. Equal trial times give zero. The
+most temporally separated pair present in that minibatch gives one. Because the
+normalization is batch-wise, the same raw time difference can receive a
+slightly different normalized value in a differently composed batch.
+
+### Step 2: Condition Separation
+
+Define a categorical distance:
+
+- $C_{ij}=0$ when $c_i=c_j$;
+- $C_{ij}=1$ when $c_i\ne c_j$.
+
+This controlled objective treats all different conditions as equally
+different. It does not encode circular adjacency: directions 1 and 2 receive
+the same categorical penalty as directions 1 and 5.
+
+### Step 3: Progress Gate
+
+Define:
+
+```math
+G_{ij}=\sqrt{s_i s_j},
+```
+
+where $s_i,s_j\in[0,1]$ are movement progress.
+
+- if both windows are at movement onset, $G_{ij}\approx0$;
+- if both are near arrival, $G_{ij}\approx1$;
+- if either window is near onset, the gate remains small.
+
+This matters because all circular-reaching conditions share the same physical
+origin. A condition label differs from the start, but the corresponding
+positions have not separated yet.
+
+### Step 4: Weighted Combination
+
+The complete metadata distance is:
+
+```math
 D_{ij} =
 \frac{
 w_{\mathrm{time}}T_{ij}
 +
-w_{\mathrm{condition}}\sqrt{s_i s_j}\,C_{ij}
+w_{\mathrm{condition}}G_{ij}C_{ij}
 }{
 w_{\mathrm{time}}+w_{\mathrm{condition}}
 }.
-$$
+```
 
 The symbols mean:
 
-- \(c_i\) is the task condition of window \(i\);
-- \(s_i\in[0,1]\) is its movement progress;
-- \(w_{\mathrm{time}}\) and \(w_{\mathrm{condition}}\) are nonnegative weights;
-- \(D_{ij}\) is small for desired neighbors and large for undesired neighbors.
+- $c_i$ is the task condition of window $i$;
+- $w_{\mathrm{time}}$ and $w_{\mathrm{condition}}$ are nonnegative weights;
+- $D_{ij}$ is small for desired neighbors and large for undesired neighbors.
 
 Default weights are `w_time=0.5` and `w_condition=0.5`.
 
-The progress gate \(\sqrt{s_i s_j}\) has a specific purpose. If both windows
-are near movement onset, then \(s_i\approx s_j\approx0\), so different
-directions receive almost no condition penalty: they truly share the center.
-Near the end of movement the gate approaches one, so different directions are
-separated.
+### Numerical Examples
 
-Three concrete cases clarify the distance:
+Use equal weights, so the denominator is one.
 
-- same time and same condition: both terms are zero, hence \(D_{ij}=0\);
-- different time but same condition: only temporal distance contributes;
-- same late time but different conditions: the condition penalty contributes
-  almost at full strength.
+| Pair | $T_{ij}$ | $C_{ij}$ | Progress | $G_{ij}$ | $D_{ij}$ |
+|---|---:|---:|---:|---:|---:|
+| Same time, same condition | 0.0 | 0 | 0.5 and 0.5 | 0.5 | 0.00 |
+| Half-trial time difference, same condition | 0.5 | 0 | 0.5 and 0.5 | 0.5 | 0.25 |
+| Same time, different conditions, near origin | 0.0 | 1 | 0.1 and 0.1 | 0.1 | 0.05 |
+| Same time, different conditions, near arrival | 0.0 | 1 | 0.9 and 0.9 | 0.9 | 0.45 |
+| Half-trial difference, different late conditions | 0.5 | 1 | 0.9 and 0.9 | 0.9 | 0.70 |
+
+The interpretation is always relative:
+
+- lower $D_{ij}$ means the pair should receive more target probability;
+- higher $D_{ij}$ means it should receive less;
+- $D_{ij}$ is not an observed spike distance;
+- $D_{ij}$ does not say that every same-condition pair must collapse to one
+  point, because temporal separation still contributes.
 
 The package also supports temporal, circular, categorical, and continuous
 metadata geometries through a general specification API. The exact controlled
@@ -107,15 +146,15 @@ not use circular adjacency among directions.
 
 Distance becomes a positive affinity:
 
-$$
+```math
 S_{ij}=\exp\left(-\frac{D_{ij}}{\tau_{\mathrm{metadata}}}\right).
-$$
+```
 
 Small distance gives affinity near one; large distance gives affinity near
-zero. The diagonal \(S_{ii}\) is removed because a window must not select
+zero. The diagonal $S_{ii}$ is removed because a window must not select
 itself. Each row is then normalized:
 
-$$
+```math
 Q_{ij}
 =
 \frac{S_{ij}}
@@ -123,7 +162,7 @@ Q_{ij}
 =
 \frac{\exp(-D_{ij}/\tau_{\mathrm{metadata}})}
 {\sum_{k\ne i}\exp(-D_{ik}/\tau_{\mathrm{metadata}})}.
-$$
+```
 
 `Q_i` is the desired probability distribution over all other observations in
 the minibatch. It replaces a binary positive/negative decision with graded
@@ -136,31 +175,31 @@ neighbors. Large values make the target flatter.
 
 Embeddings are L2-normalized. For nonzero vectors, cosine similarity is:
 
-$$
-\operatorname{cos}(z_i,z_j)
+```math
+\cos(z_i,z_j)
 =
-\frac{z_i^\top z_j}{\lVert z_i\rVert_2\lVert z_j\rVert_2}.
-$$
+\frac{z_i^\top z_j}{\| z_i\|_2\| z_j\|_2}.
+```
 
 It is near one for vectors pointing in the same direction, near zero for
 orthogonal vectors, and near minus one for opposite directions.
 
 The encoder's neighbor distribution is:
 
-$$
+```math
 P_{ij}
 =
 \frac{
-\exp\left(\operatorname{cos}(z_i,z_j)/
+\exp\left(\cos(z_i,z_j)/
 \tau_{\mathrm{embedding}}\right)
 }{
 \sum_{k\ne i}
-\exp\left(\operatorname{cos}(z_i,z_k)/
+\exp\left(\cos(z_i,z_k)/
 \tau_{\mathrm{embedding}}\right)
 }.
-$$
+```
 
-For each anchor \(i\), the row sums to one. A candidate with greater cosine
+For each anchor $i$, the row sums to one. A candidate with greater cosine
 similarity receives greater predicted probability.
 
 The default embedding temperature is `tau_embedding=0.1`. It controls how
@@ -174,24 +213,24 @@ The two temperatures are not interchangeable:
 
 ## Cross-Entropy Loss
 
-For minibatch size \(B\), training minimizes:
+For minibatch size $B$, training minimizes:
 
-$$
+```math
 \mathcal{L}
 =
 -\frac{1}{B}
 \sum_{i=1}^{B}
 \sum_{j\ne i}
 Q_{ij}\log P_{ij}.
-$$
+```
 
 This is the cross-entropy `CE(Q,P)`. Since `Q` is fixed with respect to model
 parameters, minimizing it is equivalent to minimizing `KL(Q || P)` up to the
 constant entropy of `Q`.
 
-The logarithm makes confident mistakes costly. If \(Q_{ij}\) is large but
-\(P_{ij}\) is tiny, then \(-Q_{ij}\log P_{ij}\) is large. If the encoder assigns
-probability in the same pattern requested by \(Q\), the loss decreases.
+The logarithm makes confident mistakes costly. If $Q_{ij}$ is large but
+$P_{ij}$ is tiny, then $-Q_{ij}\log P_{ij}$ is large. If the encoder assigns
+probability in the same pattern requested by $Q$, the loss decreases.
 
 The loss does not minimize Euclidean distance directly. It minimizes
 disagreement between two row-wise probability distributions: one built from
@@ -210,8 +249,8 @@ prediction P       : (256, 256)
 loss L             : one scalar
 ```
 
-Row \(i\) of \(Q\) and row \(i\) of \(P\) both describe the 255 possible
-non-self neighbors of anchor \(i\).
+Row $i$ of $Q$ and row $i$ of $P$ both describe the 255 possible
+non-self neighbors of anchor $i$.
 
 ## Is It Supervised?
 

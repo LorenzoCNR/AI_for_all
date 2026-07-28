@@ -19,23 +19,23 @@ corresponding to the same observations. Procrustes alignment:
 
 The reported score is:
 
-$$
+```math
 R^2_{\mathrm{Proc}}
 =
 1-
 \frac{
-\lVert Z-E_{\mathrm{aligned}}\rVert_F^2
+\| Z-E_{\mathrm{aligned}}\|_F^2
 }{
-\lVert Z-\bar Z\rVert_F^2
+\| Z-\bar Z\|_F^2
 }.
-$$
+```
 
 Here:
 
-- \(Z\) is the known latent matrix;
-- \(E_{\mathrm{aligned}}\) is the embedding after Procrustes transformation;
-- \(\bar Z\) repeats the column means of \(Z\);
-- \(\lVert\cdot\rVert_F^2\) sums the squared values of every matrix entry.
+- $Z$ is the known latent matrix;
+- $E_{\mathrm{aligned}}$ is the embedding after Procrustes transformation;
+- $\bar Z$ repeats the column means of $Z$;
+- $\|\cdot\|_F^2$ sums the squared values of every matrix entry.
 
 The numerator is residual mismatch after alignment. The denominator is the
 total variation of the known latent around its mean. A score near one means
@@ -114,39 +114,39 @@ This setting tests two separate questions:
 
 ## Lag-Aware Alignment Scan
 
-For each candidate lag \(\ell\), the current utility compares:
+For each candidate lag $\ell$, the current utility compares:
 
-$$
+```math
 E_A(r,t)
-\quad\text{with}\quad
+\quad\mathrm{with}\quad
 E_B(r,t+\ell).
-$$
+```
 
-\(r\) identifies the same trial in both subjects, \(t\) is reference time, and
-\(\ell\) is the candidate temporal displacement measured in bins.
+$r$ identifies the same trial in both subjects, $t$ is reference time, and
+$\ell$ is the candidate temporal displacement measured in bins.
 
 Only valid overlapping rows from the same trial are retained. No sample wraps
 across trial boundaries. Procrustes alignment is fit for that candidate and an
 alignment score is recorded:
 
-$$
-\operatorname{score}(\ell)
+```math
+\mathrm{score}(\ell)
 =
 R^2_{\mathrm{Proc}}
 \left(
 E_A(r,t),
 E_B(r,t+\ell)
 \right).
-$$
+```
 
 The estimated lag is:
 
-$$
+```math
 \widehat\ell
 =
-\underset{\ell}{\operatorname{arg\,max}}\;
-\operatorname{score}(\ell).
-$$
+\arg\max_{\ell}\;
+\mathrm{score}(\ell).
+```
 
 `arg max` returns the candidate lag at which the score is largest; it returns
 the lag value, not the score itself.

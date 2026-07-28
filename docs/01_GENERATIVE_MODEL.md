@@ -41,45 +41,45 @@ For the controlled notebooks, `R=160`, `T=100`, and `N=100`.
 
 Subscripts identify an object:
 
-- \(r\): trial;
-- \(t\): time bin inside that trial;
-- \(j\): neuron;
-- \(k\): latent coordinate.
+- $r$: trial;
+- $t$: time bin inside that trial;
+- $j$: neuron;
+- $k$: latent coordinate.
 
-For example, \(X_{r,t,j}\) is one number: the spike count of neuron \(j\) at
-time \(t\) in trial \(r\). A bold or unsubscripted capital such as \(Z\)
+For example, $X_{r,t,j}$ is one number: the spike count of neuron $j$ at
+time $t$ in trial $r$. A bold or unsubscripted capital such as $Z$
 denotes the complete array of those values.
 
 ## Deterministic Task State And Trial Variability
 
-For trial \(r\), the latent trajectory is:
+For trial $r$, the latent trajectory is:
 
-$$
+```math
 Z_r(t)=m_r(t)+\eta_r(t).
-$$
+```
 
 Here:
 
-- \(Z_r(t)\) is the complete \(K\)-dimensional latent vector at one time;
-- \(m_r(t)\) is the deterministic trajectory prescribed by the task;
-- \(\eta_r(t)\) is a random \(K\)-dimensional perturbation specific to that
+- $Z_r(t)$ is the complete $K$-dimensional latent vector at one time;
+- $m_r(t)$ is the deterministic trajectory prescribed by the task;
+- $\eta_r(t)$ is a random $K$-dimensional perturbation specific to that
   trial.
 
 The perturbation is temporally correlated:
 
-$$
+```math
 \eta_r(t)
 =
 \phi\,\eta_r(t-1)+\epsilon_r(t),
 \qquad
 \epsilon_r(t)\sim
 \mathcal{N}\!\left(0,\sigma_{\mathrm{noise}}^2 I_K\right).
-$$
+```
 
-\(\phi\) controls memory: at zero, perturbations are independent over time; as
-\(\phi\) approaches one, deviations persist longer. \(I_K\) is the
-\(K\times K\) identity matrix and
-\(\sigma_{\mathrm{noise}}\) is `noise_scale`.
+$\phi$ controls memory: at zero, perturbations are independent over time; as
+$\phi$ approaches one, deviations persist longer. $I_K$ is the
+$K\times K$ identity matrix and
+$\sigma_{\mathrm{noise}}$ is `noise_scale`.
 
 The default controlled configuration uses `phi=0.4` and
 `noise_scale=0.05`. This creates smooth trial-to-trial perturbations without
@@ -88,26 +88,26 @@ changing the known task family.
 ## Circular Reaching Task
 
 Each trial starts from a common center and reaches one of eight targets. Let
-\(\theta\) be the target angle and let \(s(t)\) be movement progress. The
+$\theta$ be the target angle and let $s(t)$ be movement progress. The
 planar position is:
 
-$$
+```math
 x(t)=s(t)\cos\theta,
 \qquad
 y(t)=s(t)\sin\theta.
-$$
+```
 
-When \(s(t)=0\), every condition is at the common center. When \(s(t)=1\), the
-point reaches the unit-circle target \((\cos\theta,\sin\theta)\).
+When $s(t)=0$, every condition is at the common center. When $s(t)=1$, the
+point reaches the unit-circle target $(\cos\theta,\sin\theta)$.
 
 The smooth movement profile is:
 
-$$
+```math
 s(t)=10t^3-15t^4+6t^5,
 \qquad 0\le t\le1.
-$$
+```
 
-In this equation \(t\) is normalized trial time, not seconds. The polynomial
+In this equation $t$ is normalized trial time, not seconds. The polynomial
 maps normalized time to normalized progress.
 
 This profile starts and ends with zero velocity and acceleration. It is a
@@ -150,23 +150,23 @@ form a cycle. The enriched state adds velocity and context.
 
 The linear part of the population observation model is:
 
-$$
+```math
 u_r(t)=Z_r(t)B+c+g_r(t).
-$$
+```
 
 The matrix multiplication has explicit dimensions:
 
-$$
+```math
 \underbrace{Z_r(t)}_{1\times K}
 \underbrace{B}_{K\times N}
 =
 \underbrace{Z_r(t)B}_{1\times N}.
-$$
+```
 
-Therefore the result contains one drive value for each of the \(N\) neurons.
-The baseline \(c\) and optional place-field term \(g_r(t)\) are also
-\(N\)-dimensional vectors. Column \(j\) of \(B\) specifies how neuron \(j\)
-weights all \(K\) latent coordinates.
+Therefore the result contains one drive value for each of the $N$ neurons.
+The baseline $c$ and optional place-field term $g_r(t)$ are also
+$N$-dimensional vectors. Column $j$ of $B$ specifies how neuron $j$
+weights all $K$ latent coordinates.
 
 The population is heterogeneous. Neurons can emphasize direction, progress,
 position, velocity, context, or mixtures. The
@@ -181,25 +181,25 @@ easier.
 
 A subset of linear-track neurons receives a localized Gaussian drive:
 
-$$
+```math
 g_j(p)
 =
 a_j
 \exp\left[
 -\frac{(p-\mu_j)^2}{2\sigma_j^2}
 \right].
-$$
+```
 
 Here:
 
-- \(p\in[0,1]\) is current track position;
+- $p\in[0,1]$ is current track position;
 - `mu_j` is neuron `j`'s preferred track position;
 - `sigma_j` is its field width;
 - `a_j` is its gain.
 
-At \(p=\mu_j\), the squared distance is zero and \(g_j(p)=a_j\), its maximum.
-Moving away from \(\mu_j\) increases the negative exponent and lowers the
-drive. Larger \(\sigma_j\) produces a broader preferred region.
+At $p=\mu_j$, the squared distance is zero and $g_j(p)=a_j$, its maximum.
+Moving away from $\mu_j$ increases the negative exponent and lowers the
+drive. Larger $\sigma_j$ produces a broader preferred region.
 
 The controlled defaults are `place_fraction=0.25`,
 `place_width=0.10`, and `place_scale=3.0`.
@@ -214,23 +214,23 @@ yet part of the validated suite.
 
 The controlled notebooks use:
 
-$$
+```math
 \lambda_{r,t,j}
 =
 r_{\mathrm{scale}}\,
-\operatorname{softplus}(u_{r,t,j}),
-$$
+\mathrm{softplus}(u_{r,t,j}),
+```
 
 with
 
-$$
-\operatorname{softplus}(u)=\log(1+\exp u).
-$$
+```math
+\mathrm{softplus}(u)=\log(1+\exp u).
+```
 
 `softplus` guarantees positive rates while remaining smooth. The default
 `rate_scale=10.0` gives `lambda` units of spikes/second. This operation is
-element-wise: every drive value \(u_{r,t,j}\) becomes one nonnegative firing
-rate \(\lambda_{r,t,j}\).
+element-wise: every drive value $u_{r,t,j}$ becomes one nonnegative firing
+rate $\lambda_{r,t,j}$.
 
 The baseline vector is sampled around `baseline_mean=1.0` with
 `baseline_std=0.10`. Changing these quantities changes the overall rate regime
@@ -238,24 +238,24 @@ and therefore the difficulty of recovery.
 
 ## From Rate To Spike Counts
 
-For bin width \(\Delta t\), the expected number of spikes in one bin is:
+For bin width $\Delta t$, the expected number of spikes in one bin is:
 
-$$
+```math
 \mu_{r,t,j}=\lambda_{r,t,j}\Delta t.
-$$
+```
 
 The observed count is sampled as:
 
-$$
+```math
 X_{r,t,j}\sim
-\operatorname{Poisson}(\mu_{r,t,j})
+\mathrm{Poisson}(\mu_{r,t,j})
 =
-\operatorname{Poisson}(\lambda_{r,t,j}\Delta t).
-$$
+\mathrm{Poisson}(\lambda_{r,t,j}\Delta t).
+```
 
-The symbol \(\sim\) means "is randomly sampled from," not "is equal to."
+The symbol $\sim$ means "is randomly sampled from," not "is equal to."
 For example, a rate of 20 spikes/second and a bin width of 0.02 seconds give an
-expected count of \(20\times0.02=0.4\) spikes in that bin. The realized count
+expected count of $20\times0.02=0.4$ spikes in that bin. The realized count
 can be 0, 1, 2, and so on.
 
 The controlled suite uses `dt=0.02` seconds, so one trial contains 100 bins
