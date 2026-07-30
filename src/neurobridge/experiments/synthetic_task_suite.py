@@ -71,6 +71,9 @@ class SyntheticTaskConfig:
     place_fraction: float = 0.25
     place_width: float = 0.10
     place_scale: float = 3.0
+    n_position_bins: int = 20
+    gradient_fraction: float = 0.0
+    nonpreferred_direction_gain: float = 0.10
     train_fraction: float = 0.8
     random_state: int = 42
 
@@ -86,6 +89,18 @@ class SyntheticTaskConfig:
             raise ValueError("place_fraction must satisfy 0 <= value < 1.")
         if self.place_width <= 0 or self.place_scale < 0:
             raise ValueError("Place-field width and scale must be positive.")
+        if self.n_position_bins < 2:
+            raise ValueError("n_position_bins must be at least 2.")
+        if not 0.0 <= self.gradient_fraction < 1.0:
+            raise ValueError("gradient_fraction must satisfy 0 <= value < 1.")
+        if self.place_fraction + self.gradient_fraction >= 1.0:
+            raise ValueError(
+                "place_fraction + gradient_fraction must be smaller than 1."
+            )
+        if not 0.0 <= self.nonpreferred_direction_gain <= 1.0:
+            raise ValueError(
+                "nonpreferred_direction_gain must lie between 0 and 1."
+            )
         if self.rate_scale <= 0:
             raise ValueError("rate_scale must be strictly positive.")
         if not 0.0 < self.train_fraction < 1.0:
@@ -135,94 +150,134 @@ def build_linear_loading_and_place_fields(
     place_scale: float,
     first_coordinates_multiplier: float,
     random_state: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    direction: np.ndarray | None = None,
+    n_position_bins: int = 20,
+    gradient_fraction: float = 0.0,
+    nonpreferred_direction_gain: float = 0.10,
+    return_metadata: bool = False,
+) -> tuple[np.ndarray, ...]:
     """
-    Build linear-task loadings and localized position-dependent drive.
+    Build an identifiable population for a binned linear-track task.
 
-    Place neurons are not represented by a linear column of ``B``. Their
-    contribution is a Gaussian field evaluated along the track:
+    The primary neuron classes are ``positional``, ``directional``, and
+    ``mixed``. Positional and mixed neurons receive a discrete preferred
+    position bin. Mixed neurons also receive a preferred movement direction,
+    so their spatial field is attenuated in the opposite direction. A linear
+    position gradient is available as an optional fourth class.
 
-        g_j(p) = a_j exp(-(p - mu_j)^2 / (2 sigma_j^2)).
+    ``place_fraction`` is retained for API compatibility and now specifies
+    the positional-neuron fraction. The remaining non-gradient neurons are
+    split equally between directional and mixed types.
     """
     if k < 2:
         raise ValueError("Linear loading requires k >= 2.")
     if position.ndim != 2:
         raise ValueError("position must have shape (n_trials, trial_length).")
+    if n_position_bins < 2:
+        raise ValueError("n_position_bins must be at least 2.")
+    if not 0.0 <= place_fraction < 1.0:
+        raise ValueError("place_fraction must satisfy 0 <= value < 1.")
+    if not 0.0 <= gradient_fraction < 1.0:
+        raise ValueError("gradient_fraction must satisfy 0 <= value < 1.")
+    if place_fraction + gradient_fraction >= 1.0:
+        raise ValueError(
+            "place_fraction + gradient_fraction must be smaller than 1."
+        )
+    if not 0.0 <= nonpreferred_direction_gain <= 1.0:
+        raise ValueError(
+            "nonpreferred_direction_gain must lie between 0 and 1."
+        )
+
+    if direction is None:
+        direction_binary = np.zeros(position.shape, dtype=int)
+        for trial in range(position.shape[0]):
+            turn = int(np.argmax(position[trial]))
+            direction_binary[trial, :turn + 1] = 1
+    else:
+        direction_array = np.asarray(direction)
+        if direction_array.shape != position.shape:
+            raise ValueError("direction must have the same shape as position.")
+        unique_direction = set(np.unique(direction_array).tolist())
+        if unique_direction.issubset({0, 1}):
+            direction_binary = direction_array.astype(int)
+        elif unique_direction.issubset({-1, 1}):
+            direction_binary = (direction_array > 0).astype(int)
+        else:
+            raise ValueError("direction must contain only 0/1 or -1/+1.")
 
     rng = np.random.default_rng(random_state)
     B = np.zeros((k, n_neurons), dtype=float)
-
-    if k == 2:
-        names = np.array(["direction", "position", "mixed", "place", "none"])
-        remaining = 1.0 - place_fraction
-        probabilities = remaining * np.array([
-            0.333,
-            0.333,
-            0.320,
-            0.0,
-            0.014,
-        ])
-        probabilities[3] = place_fraction
-    else:
-        names = np.array([
-            "direction",
-            "position",
-            "velocity",
-            "context",
-            "mixed",
-            "place",
-            "none",
-        ])
-        remaining = 1.0 - place_fraction
-        probabilities = remaining * np.array([
-            0.27,
-            0.27,
-            0.04,
-            0.04,
-            0.37,
-            0.0,
-            0.01,
-        ])
-        probabilities[5] = place_fraction
-
-    probabilities = probabilities / probabilities.sum()
+    names = np.array(["positional", "directional", "mixed", "gradient"])
+    remaining = 1.0 - place_fraction - gradient_fraction
+    probabilities = np.array([
+        place_fraction,
+        remaining / 2.0,
+        remaining / 2.0,
+        gradient_fraction,
+    ])
     neuron_types = rng.choice(names, size=n_neurons, p=probabilities)
+    preferred_bins = np.full(n_neurons, -1, dtype=int)
+    preferred_directions = np.full(n_neurons, -1, dtype=int)
+    gradient_sign = np.zeros(n_neurons, dtype=int)
+    spatial_mask = np.isin(neuron_types, ["positional", "mixed"])
+    directional_mask = np.isin(neuron_types, ["directional", "mixed"])
+    preferred_bins[spatial_mask] = rng.integers(
+        0,
+        n_position_bins,
+        size=int(spatial_mask.sum()),
+    )
+    preferred_directions[directional_mask] = rng.integers(
+        0,
+        2,
+        size=int(directional_mask.sum()),
+    )
 
-    for neuron, neuron_type in enumerate(neuron_types):
-        if neuron_type == "direction":
-            B[1, neuron] = rng.choice([-1.0, 1.0])
-        elif neuron_type == "position":
-            B[0, neuron] = rng.choice([-1.0, 1.0])
-        elif neuron_type == "velocity" and k > 2:
-            B[2, neuron] = rng.choice([-1.0, 1.0])
-        elif neuron_type == "context" and k > 3:
-            B[3, neuron] = rng.choice([-1.0, 1.0])
-        elif neuron_type == "mixed":
-            available = np.arange(k)
-            selected = rng.choice(
-                available,
-                size=min(max(2, k // 2), k),
-                replace=False,
-            )
-            B[selected, neuron] = rng.choice(
-                [-1.0, 1.0],
-                size=len(selected),
-            )
-            B[:, neuron] /= np.linalg.norm(B[:, neuron])
-
+    directional_indices = np.flatnonzero(neuron_types == "directional")
+    B[1, directional_indices] = (
+        2.0 * preferred_directions[directional_indices] - 1.0
+    )
+    gradient_indices = np.flatnonzero(neuron_types == "gradient")
+    if len(gradient_indices) > 0:
+        gradient_sign[gradient_indices] = rng.choice(
+            [-1, 1],
+            size=len(gradient_indices),
+        )
+        B[0, gradient_indices] = gradient_sign[gradient_indices]
     B[:2, :] *= first_coordinates_multiplier
 
+    bin_edges = np.linspace(0.0, 1.0, n_position_bins + 1)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+    position_bins = np.digitize(position, bin_edges[1:-1], right=False)
+    position_bins = np.clip(position_bins, 0, n_position_bins - 1)
     centers = np.full(n_neurons, np.nan)
-    place_indices = np.flatnonzero(neuron_types == "place")
-    centers[place_indices] = rng.uniform(0.05, 0.95, size=len(place_indices))
-
+    centers[spatial_mask] = bin_centers[preferred_bins[spatial_mask]]
+    width_bins = max(place_width * n_position_bins, 0.5)
     place_drive = np.zeros((*position.shape, n_neurons), dtype=float)
-    for neuron in place_indices:
-        centered_position = position - centers[neuron]
-        place_drive[:, :, neuron] = place_scale * np.exp(
-            -(centered_position**2) / (2.0 * place_width**2)
+    for neuron in np.flatnonzero(spatial_mask):
+        bin_distance = position_bins - preferred_bins[neuron]
+        spatial_field = place_scale * np.exp(
+            -(bin_distance**2) / (2.0 * width_bins**2)
         )
+        if neuron_types[neuron] == "mixed":
+            direction_gain = np.where(
+                direction_binary == preferred_directions[neuron],
+                1.0,
+                nonpreferred_direction_gain,
+            )
+            spatial_field = spatial_field * direction_gain
+        place_drive[:, :, neuron] = spatial_field
 
+    metadata = {
+        "neuron_id": np.arange(n_neurons, dtype=int),
+        "neuron_type": neuron_types.copy(),
+        "preferred_bin": preferred_bins,
+        "preferred_direction": preferred_directions,
+        "gradient_sign": gradient_sign,
+        "position_bin_edges": bin_edges,
+        "position_bin_centers": bin_centers,
+    }
+    if return_metadata:
+        return B, neuron_types, centers, place_drive, metadata
     return B, neuron_types, centers, place_drive
 
 
@@ -1220,7 +1275,9 @@ def save_experiment_figures(
 
     if condition_mode == "linear":
         neuron_types = np.asarray(results["neuron_types"])
-        place_indices = np.flatnonzero(neuron_types == "place")
+        place_indices = np.flatnonzero(
+            np.isin(neuron_types, ["positional", "mixed", "place"])
+        )
         if len(place_indices) > 0:
             centers = np.asarray(results["place_centers"])[place_indices]
             order = np.argsort(centers)
@@ -1279,7 +1336,7 @@ def save_experiment_figures(
                     color=color,
                     linewidth=2.0,
                 )
-            axes[0].set_title("Assigned Gaussian place fields")
+            axes[0].set_title("Assigned spatial fields")
             axes[0].set_xlabel("Normalized track position")
             axes[0].set_ylabel("Normalized place drive")
             axes[0].set_xlim(0.0, 1.0)
@@ -1371,12 +1428,14 @@ def run_synthetic_task_experiment(
         place_drive = np.zeros(
             (config.n_trials, config.trial_length, config.n_neurons)
         )
+        neuron_metadata = None
     else:
         (
             B,
             neuron_types,
             place_centers,
             place_drive,
+            neuron_metadata,
         ) = build_linear_loading_and_place_fields(
             k=config.latent_dim,
             n_neurons=config.n_neurons,
@@ -1386,6 +1445,10 @@ def run_synthetic_task_experiment(
             place_scale=config.place_scale,
             first_coordinates_multiplier=config.first_coordinates_multiplier,
             random_state=config.random_state + 1,
+            n_position_bins=config.n_position_bins,
+            gradient_fraction=config.gradient_fraction,
+            nonpreferred_direction_gain=config.nonpreferred_direction_gain,
+            return_metadata=True,
         )
 
     rng = np.random.default_rng(config.random_state + 2)
@@ -1435,6 +1498,7 @@ def run_synthetic_task_experiment(
         "B": B,
         "baseline": baseline,
         "neuron_types": neuron_types,
+        "neuron_metadata": neuron_metadata,
         "place_centers": place_centers,
         "u": u,
         "lam": lam,
