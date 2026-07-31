@@ -3,9 +3,9 @@ import unittest
 import numpy as np
 
 from neurobridge.data.dataset import TemporalWindowDataset
+from neurobridge.data.sim import build_linear_loading_and_place_fields
 from neurobridge.experiments import (
     SyntheticTaskConfig,
-    build_linear_loading_and_place_fields,
 )
 
 

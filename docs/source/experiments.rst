@@ -86,8 +86,9 @@ execution graph is:
 
 The corresponding modules are visible in the import cell. Latent generation
 uses :class:`neurobridge.data.sim.Lat_traj_generator.LatentTrajectoryGenerator`.
-Population tuning uses ``build_structured_B`` for circular tasks and
-``build_linear_loading_and_place_fields`` for linear tasks. Emission uses
+Population tuning uses ``neurobridge.data.sim.build_structured_B`` for circular
+tasks and ``neurobridge.data.sim.build_linear_loading_and_place_fields`` for
+linear tasks. Emission uses
 ``drive_to_rate`` and ``rate_to_spike``. The learning cells construct
 ``TemporalCNNEncoder``, ``DataLoader``, ``AdamW``,
 ``build_similarity_matrix``, and ``soft_contrastive_loss`` explicitly.

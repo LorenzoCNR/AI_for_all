@@ -57,7 +57,7 @@ Each notebook executes the same visible stages:
 | Stage | Imported module | Input | Output | Main controls |
 |---|---|---|---|---|
 | Latent task | `neurobridge.data.sim.LatentTrajectoryGenerator` | experiment config | `Z`, condition, task state | latent dimension, noise, trial count |
-| Population map | `build_structured_B` or `build_linear_loading_and_place_fields` | `Z`/task state | `B`, neuron types, place drive | tuning mixture, place fraction, loading scale |
+| Population map | `neurobridge.data.sim.build_structured_B` or `neurobridge.data.sim.build_linear_loading_and_place_fields` | `Z`/task state | `B`, neuron types, place drive | tuning mixture, place fraction, loading scale |
 | Spike emission | `drive_to_rate`, `rate_to_spike` | `Z`, `B`, baseline | `u`, `lam`, `X` | nonlinearity, rate scale, `dt` |
 | Windowing | `build_windows_and_labels` | `X`, metadata | `TemporalWindowDataset` | window size, stride, padding |
 | Split | `split_trials` | trial metadata | train/test masks | training fraction, seed |

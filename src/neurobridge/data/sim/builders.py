@@ -2,6 +2,102 @@
 import collections
 import numpy as np
 import math
+
+
+def build_linear_loading_and_place_fields(
+    *, k, n_neurons, position, place_fraction, place_width, place_scale,
+    first_coordinates_multiplier, random_state, direction=None,
+    n_position_bins=20, gradient_fraction=0.0,
+    nonpreferred_direction_gain=0.10, return_metadata=False,
+):
+    """Build the linear loading matrix and nonlinear spatial fields."""
+    if k < 2:
+        raise ValueError("Linear loading requires k >= 2.")
+    position = np.asarray(position)
+    if position.ndim != 2:
+        raise ValueError("position must have shape (n_trials, trial_length).")
+    if n_position_bins < 2:
+        raise ValueError("n_position_bins must be at least 2.")
+    if not 0.0 <= place_fraction < 1.0:
+        raise ValueError("place_fraction must satisfy 0 <= value < 1.")
+    if not 0.0 <= gradient_fraction < 1.0:
+        raise ValueError("gradient_fraction must satisfy 0 <= value < 1.")
+    if place_fraction + gradient_fraction >= 1.0:
+        raise ValueError("place_fraction + gradient_fraction must be smaller than 1.")
+    if not 0.0 <= nonpreferred_direction_gain <= 1.0:
+        raise ValueError("nonpreferred_direction_gain must lie between 0 and 1.")
+
+    if direction is None:
+        direction_binary = np.zeros(position.shape, dtype=int)
+        for trial in range(position.shape[0]):
+            direction_binary[trial, : int(np.argmax(position[trial])) + 1] = 1
+    else:
+        direction_array = np.asarray(direction)
+        if direction_array.shape != position.shape:
+            raise ValueError("direction must have the same shape as position.")
+        unique_direction = set(np.unique(direction_array).tolist())
+        if unique_direction.issubset({0, 1}):
+            direction_binary = direction_array.astype(int)
+        elif unique_direction.issubset({-1, 1}):
+            direction_binary = (direction_array > 0).astype(int)
+        else:
+            raise ValueError("direction must contain only 0/1 or -1/+1.")
+
+    rng = np.random.default_rng(random_state)
+    B = np.zeros((k, n_neurons), dtype=float)
+    names = np.array(["positional", "directional", "mixed", "gradient"])
+    remaining = 1.0 - place_fraction - gradient_fraction
+    probabilities = [place_fraction, remaining / 2, remaining / 2, gradient_fraction]
+    neuron_types = rng.choice(names, size=n_neurons, p=probabilities)
+    preferred_bins = np.full(n_neurons, -1, dtype=int)
+    preferred_directions = np.full(n_neurons, -1, dtype=int)
+    gradient_sign = np.zeros(n_neurons, dtype=int)
+    spatial_mask = np.isin(neuron_types, ["positional", "mixed"])
+    directional_mask = np.isin(neuron_types, ["directional", "mixed"])
+    preferred_bins[spatial_mask] = rng.integers(0, n_position_bins, spatial_mask.sum())
+    preferred_directions[directional_mask] = rng.integers(0, 2, directional_mask.sum())
+
+    directional_indices = np.flatnonzero(neuron_types == "directional")
+    B[1, directional_indices] = 2 * preferred_directions[directional_indices] - 1
+    gradient_indices = np.flatnonzero(neuron_types == "gradient")
+    if gradient_indices.size:
+        gradient_sign[gradient_indices] = rng.choice([-1, 1], gradient_indices.size)
+        B[0, gradient_indices] = gradient_sign[gradient_indices]
+    B[:2] *= first_coordinates_multiplier
+
+    bin_edges = np.linspace(0.0, 1.0, n_position_bins + 1)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    position_bins = np.clip(
+        np.digitize(position, bin_edges[1:-1]), 0, n_position_bins - 1
+    )
+    centers = np.full(n_neurons, np.nan)
+    centers[spatial_mask] = bin_centers[preferred_bins[spatial_mask]]
+    width_bins = max(place_width * n_position_bins, 0.5)
+    place_drive = np.zeros((*position.shape, n_neurons), dtype=float)
+    for neuron in np.flatnonzero(spatial_mask):
+        distance = position_bins - preferred_bins[neuron]
+        field = place_scale * np.exp(-(distance**2) / (2 * width_bins**2))
+        if neuron_types[neuron] == "mixed":
+            field *= np.where(
+                direction_binary == preferred_directions[neuron],
+                1.0,
+                nonpreferred_direction_gain,
+            )
+        place_drive[..., neuron] = field
+
+    metadata = {
+        "neuron_id": np.arange(n_neurons, dtype=int),
+        "neuron_type": neuron_types.copy(),
+        "preferred_bin": preferred_bins,
+        "preferred_direction": preferred_directions,
+        "gradient_sign": gradient_sign,
+        "position_bin_edges": bin_edges,
+        "position_bin_centers": bin_centers,
+    }
+    result = (B, neuron_types, centers, place_drive)
+    return (*result, metadata) if return_metadata else result
+
+
 def deterministic_builder(
     condition,
     k,

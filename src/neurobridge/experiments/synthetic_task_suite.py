@@ -19,7 +19,11 @@ from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, Subset
 
 from neurobridge.data.dataset import TemporalWindowDataset
-from neurobridge.data.sim import LatentTrajectoryGenerator, build_structured_B
+from neurobridge.data.sim import (
+    LatentTrajectoryGenerator,
+    build_linear_loading_and_place_fields,
+    build_structured_B,
+)
 from neurobridge.data.sim.builders import drive_to_rate, rate_to_spike
 from neurobridge.eval.representation import evaluate_latent_recovery
 from neurobridge.losses.infonce import soft_contrastive_loss
@@ -138,147 +142,6 @@ def circular_neuron_type_probabilities(k: int) -> dict[str, float]:
         "mixed": 0.30,
         "none": 0.01,
     }
-
-
-def build_linear_loading_and_place_fields(
-    *,
-    k: int,
-    n_neurons: int,
-    position: np.ndarray,
-    place_fraction: float,
-    place_width: float,
-    place_scale: float,
-    first_coordinates_multiplier: float,
-    random_state: int,
-    direction: np.ndarray | None = None,
-    n_position_bins: int = 20,
-    gradient_fraction: float = 0.0,
-    nonpreferred_direction_gain: float = 0.10,
-    return_metadata: bool = False,
-) -> tuple[np.ndarray, ...]:
-    """
-    Build an identifiable population for a binned linear-track task.
-
-    The primary neuron classes are ``positional``, ``directional``, and
-    ``mixed``. Positional and mixed neurons receive a discrete preferred
-    position bin. Mixed neurons also receive a preferred movement direction,
-    so their spatial field is attenuated in the opposite direction. A linear
-    position gradient is available as an optional fourth class.
-
-    ``place_fraction`` is retained for API compatibility and now specifies
-    the positional-neuron fraction. The remaining non-gradient neurons are
-    split equally between directional and mixed types.
-    """
-    if k < 2:
-        raise ValueError("Linear loading requires k >= 2.")
-    if position.ndim != 2:
-        raise ValueError("position must have shape (n_trials, trial_length).")
-    if n_position_bins < 2:
-        raise ValueError("n_position_bins must be at least 2.")
-    if not 0.0 <= place_fraction < 1.0:
-        raise ValueError("place_fraction must satisfy 0 <= value < 1.")
-    if not 0.0 <= gradient_fraction < 1.0:
-        raise ValueError("gradient_fraction must satisfy 0 <= value < 1.")
-    if place_fraction + gradient_fraction >= 1.0:
-        raise ValueError(
-            "place_fraction + gradient_fraction must be smaller than 1."
-        )
-    if not 0.0 <= nonpreferred_direction_gain <= 1.0:
-        raise ValueError(
-            "nonpreferred_direction_gain must lie between 0 and 1."
-        )
-
-    if direction is None:
-        direction_binary = np.zeros(position.shape, dtype=int)
-        for trial in range(position.shape[0]):
-            turn = int(np.argmax(position[trial]))
-            direction_binary[trial, :turn + 1] = 1
-    else:
-        direction_array = np.asarray(direction)
-        if direction_array.shape != position.shape:
-            raise ValueError("direction must have the same shape as position.")
-        unique_direction = set(np.unique(direction_array).tolist())
-        if unique_direction.issubset({0, 1}):
-            direction_binary = direction_array.astype(int)
-        elif unique_direction.issubset({-1, 1}):
-            direction_binary = (direction_array > 0).astype(int)
-        else:
-            raise ValueError("direction must contain only 0/1 or -1/+1.")
-
-    rng = np.random.default_rng(random_state)
-    B = np.zeros((k, n_neurons), dtype=float)
-    names = np.array(["positional", "directional", "mixed", "gradient"])
-    remaining = 1.0 - place_fraction - gradient_fraction
-    probabilities = np.array([
-        place_fraction,
-        remaining / 2.0,
-        remaining / 2.0,
-        gradient_fraction,
-    ])
-    neuron_types = rng.choice(names, size=n_neurons, p=probabilities)
-    preferred_bins = np.full(n_neurons, -1, dtype=int)
-    preferred_directions = np.full(n_neurons, -1, dtype=int)
-    gradient_sign = np.zeros(n_neurons, dtype=int)
-    spatial_mask = np.isin(neuron_types, ["positional", "mixed"])
-    directional_mask = np.isin(neuron_types, ["directional", "mixed"])
-    preferred_bins[spatial_mask] = rng.integers(
-        0,
-        n_position_bins,
-        size=int(spatial_mask.sum()),
-    )
-    preferred_directions[directional_mask] = rng.integers(
-        0,
-        2,
-        size=int(directional_mask.sum()),
-    )
-
-    directional_indices = np.flatnonzero(neuron_types == "directional")
-    B[1, directional_indices] = (
-        2.0 * preferred_directions[directional_indices] - 1.0
-    )
-    gradient_indices = np.flatnonzero(neuron_types == "gradient")
-    if len(gradient_indices) > 0:
-        gradient_sign[gradient_indices] = rng.choice(
-            [-1, 1],
-            size=len(gradient_indices),
-        )
-        B[0, gradient_indices] = gradient_sign[gradient_indices]
-    B[:2, :] *= first_coordinates_multiplier
-
-    bin_edges = np.linspace(0.0, 1.0, n_position_bins + 1)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
-    position_bins = np.digitize(position, bin_edges[1:-1], right=False)
-    position_bins = np.clip(position_bins, 0, n_position_bins - 1)
-    centers = np.full(n_neurons, np.nan)
-    centers[spatial_mask] = bin_centers[preferred_bins[spatial_mask]]
-    width_bins = max(place_width * n_position_bins, 0.5)
-    place_drive = np.zeros((*position.shape, n_neurons), dtype=float)
-    for neuron in np.flatnonzero(spatial_mask):
-        bin_distance = position_bins - preferred_bins[neuron]
-        spatial_field = place_scale * np.exp(
-            -(bin_distance**2) / (2.0 * width_bins**2)
-        )
-        if neuron_types[neuron] == "mixed":
-            direction_gain = np.where(
-                direction_binary == preferred_directions[neuron],
-                1.0,
-                nonpreferred_direction_gain,
-            )
-            spatial_field = spatial_field * direction_gain
-        place_drive[:, :, neuron] = spatial_field
-
-    metadata = {
-        "neuron_id": np.arange(n_neurons, dtype=int),
-        "neuron_type": neuron_types.copy(),
-        "preferred_bin": preferred_bins,
-        "preferred_direction": preferred_directions,
-        "gradient_sign": gradient_sign,
-        "position_bin_edges": bin_edges,
-        "position_bin_centers": bin_centers,
-    }
-    if return_metadata:
-        return B, neuron_types, centers, place_drive, metadata
-    return B, neuron_types, centers, place_drive
 
 
 def build_windows_and_labels(

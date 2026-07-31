@@ -41,11 +41,13 @@ if not (PROJECT_ROOT / "src" / "neurobridge").exists():
 os.chdir(PROJECT_ROOT)
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from neurobridge.data.sim import LatentTrajectoryGenerator
+from neurobridge.data.sim import (
+    LatentTrajectoryGenerator,
+    build_linear_loading_and_place_fields,
+)
 from neurobridge.data.sim.builders import drive_to_rate, rate_to_spike
 from neurobridge.experiments import (
     SyntheticTaskConfig,
-    build_linear_loading_and_place_fields,
 )
 
 print("Project root:", PROJECT_ROOT)

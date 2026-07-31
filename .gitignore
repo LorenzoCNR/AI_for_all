@@ -29,7 +29,11 @@ Hasson_pipeline/*.mat
 Hasson_pipeline/*.asv
 
 # Local reference datasets
-data/
+/data/
+
+# Local guided exercise (not published)
+/notebooks/circular_multisubject_todo.py
+/notebooks/circular_multisubject_todo.ipynb
 
 # Personal archive, old experiments, private material
 _private_Archive/
